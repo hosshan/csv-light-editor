@@ -5,10 +5,10 @@
 ### Week 1: 環境構築とプロジェクト初期化
 
 #### タスク1.1: Tauriプロジェクトのセットアップ
-- [ ] Rust環境のインストール確認
-- [ ] Tauri CLIのインストール（`cargo install tauri-cli`）
-- [ ] プロジェクト初期化（`npm create tauri-app@latest`）
-- [ ] React + TypeScriptテンプレート選択
+- [x] Rust環境のインストール確認
+- [x] Tauri CLIのインストール（`cargo install tauri-cli`）
+- [x] プロジェクト初期化（`npm create tauri-app@latest`）
+- [x] React + TypeScriptテンプレート選択
 - [ ] プロジェクト構造の確認と調整
 
 #### タスク1.2: 開発環境の構築
