@@ -16,13 +16,21 @@
       "shell": {
         "all": false,
         "open": true
+      },
+      "dialog": {
+        "all": true
+      },
+      "fs": {
+        "all": true
       }
     },
     "windows": [
       {
-        "title": "csv-light-editor",
-        "width": 800,
-        "height": 600
+        "title": "CSV Light Editor",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600
       }
     ],
     "security": {
