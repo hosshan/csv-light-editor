@@ -1,465 +1,62 @@
-/* CSS Reset and Base Styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+  }
 }
 
-html, body, #root {
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
 }
 
-/* Color Variables */
-:root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f9fa;
-  --bg-muted: #e9ecef;
-  --border: #dee2e6;
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
-  --text-muted: #adb5bd;
-  --accent: #0d6efd;
-  --accent-hover: #0b5ed7;
-  --danger: #dc3545;
-  --warning: #fd7e14;
-  --shadow: rgba(0, 0, 0, 0.1);
-}
-
-.dark {
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #252525;
-  --bg-muted: #333333;
-  --border: #404040;
-  --text-primary: #ffffff;
-  --text-secondary: #cccccc;
-  --text-muted: #999999;
-  --accent: #0d6efd;
-  --accent-hover: #0b5ed7;
-  --shadow: rgba(255, 255, 255, 0.1);
-}
-
-/* Layout Components */
-.app-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-/* Toolbar */
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border);
-  min-height: 48px;
-}
-
-.toolbar-section {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding-right: 8px;
-  border-right: 1px solid var(--border);
-  margin-right: 8px;
-}
-
-.toolbar-group:last-child {
-  border-right: none;
-  margin-right: 0;
-}
-
-/* Main Content */
-.main-content {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-/* Sidebar */
-.sidebar {
-  width: 256px;
-  background-color: var(--bg-muted);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-section {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.sidebar-section:last-child {
-  border-bottom: none;
-}
-
-.sidebar-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-}
-
-.sidebar-content {
-  font-size: 12px;
-}
-
-.sidebar-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 0;
-  color: var(--text-secondary);
-}
-
-.sidebar-list {
-  max-height: 192px;
-  overflow-y: auto;
-  margin-right: -8px;
-  padding-right: 8px;
-}
-
-.sidebar-list-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 8px;
-  margin: 2px 0;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.sidebar-list-item:hover {
-  background-color: var(--bg-secondary);
-}
-
-/* CSV Table Container */
-.csv-container {
-  flex: 1;
-  position: relative;
-  background-color: var(--bg-primary);
-}
-
-.csv-empty-state {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
-.csv-empty-state .title {
-  font-size: 16px;
-  font-weight: 500;
-  margin-bottom: 8px;
-  color: var(--text-secondary);
-}
-
-/* CSV Table */
-.csv-table {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--bg-primary);
-}
-
-.csv-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background-color: var(--bg-muted);
-  border-bottom: 1px solid var(--border);
-}
-
-.csv-header-row {
-  display: flex;
-}
-
-.csv-header-cell {
-  width: 48px;
-  height: 40px;
-  border-right: 1px solid var(--border);
-  background-color: var(--bg-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.csv-column-header {
-  border-right: 1px solid var(--border);
-  background-color: var(--bg-muted);
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 40px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.csv-body {
-  flex: 1;
-  overflow: auto;
-  contain: strict;
-}
-
-.csv-row {
-  display: flex;
-}
-
-.csv-row-number {
-  width: 48px;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background-color: var(--bg-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: var(--text-muted);
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.csv-cell {
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background-color: var(--bg-primary);
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  font-size: 13px;
-  color: var(--text-primary);
-  cursor: cell;
-  transition: background-color 0.1s ease;
-  position: absolute;
-  top: 0;
-  left: 48px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.csv-cell:hover {
-  background-color: var(--bg-secondary);
-}
-
-.csv-cell.selected {
-  background-color: rgba(13, 110, 253, 0.1);
-  border: 2px solid var(--accent);
-  z-index: 1;
-}
-
-.csv-cell.editing {
-  background-color: var(--bg-primary);
-  border: 2px solid var(--accent);
-  z-index: 2;
-  padding: 0;
-}
-
-.csv-cell.editing input {
-  width: 100%;
-  height: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
-  padding: 0 8px;
-  font-size: 13px;
-  color: var(--text-primary);
-  font-family: inherit;
-}
-
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-decoration: none;
-  white-space: nowrap;
-  user-select: none;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text-primary);
-  border: 1px solid transparent;
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.btn-ghost:active:not(:disabled) {
-  background-color: var(--bg-muted);
-}
-
-.btn-sm {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-/* Loading and Error States */
-.loading-overlay {
-  position: absolute;
-  inset: 0;
-  background-color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(2px);
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dark .loading-overlay {
-  background-color: rgba(0, 0, 0, 0.8);
-}
-
-.loading-content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-primary);
-}
-
-.spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--bg-muted);
-  border-top: 2px solid var(--accent);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.error-toast {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 50;
-  background-color: var(--danger);
-  color: white;
-  padding: 12px 16px;
-  border-radius: 6px;
-  box-shadow: 0 4px 6px var(--shadow);
-  max-width: 300px;
-}
-
-.error-title {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.error-message {
-  font-size: 12px;
-  opacity: 0.9;
-}
-
-/* File Info */
-.file-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.file-status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--warning);
-}
-
-/* Icons */
-.icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-/* Scrollbar */
-.csv-body::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-
-.csv-body::-webkit-scrollbar-track {
-  background: var(--bg-muted);
-}
-
-.csv-body::-webkit-scrollbar-thumb {
-  background: var(--text-muted);
-  border-radius: 6px;
-  opacity: 0.3;
-}
-
-.csv-body::-webkit-scrollbar-thumb:hover {
-  opacity: 0.5;
-}
-
-.csv-body::-webkit-scrollbar-corner {
-  background: var(--bg-muted);
-}
-
-/* Utilities */
-.font-mono {
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-}
-
-.truncate {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.flex-1 {
-  flex: 1;
-}

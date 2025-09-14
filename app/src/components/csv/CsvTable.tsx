@@ -119,7 +119,7 @@ export function CsvTable() {
       {/* Table Body with Virtual Scrolling */}
       <div
         ref={parentRef}
-        className="flex-1 overflow-auto csv-grid"
+        className="flex-1 overflow-auto"
         style={{ contain: 'strict' }}
       >
         <div
@@ -155,10 +155,10 @@ export function CsvTable() {
                   <div
                     key={virtualColumn.index}
                     className={cn(
-                      'csv-cell flex items-center px-2 text-sm cursor-cell',
+                      'border-r border-b border-border bg-background flex items-center px-2 text-sm cursor-cell transition-colors hover:bg-accent',
                       {
-                        'selected': isSelected && !isEditing,
-                        'editing': isEditing,
+                        'bg-primary/10 border-primary z-10': isSelected && !isEditing,
+                        'bg-background border-primary z-20': isEditing,
                       }
                     )}
                     style={{

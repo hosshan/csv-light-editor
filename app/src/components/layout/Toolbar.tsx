@@ -9,7 +9,7 @@ import {
   Settings,
   FileText
 } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { Button } from '@/components/ui/button';
 import { useCsvStore } from '../../store/csvStore';
 import { useTauri } from '../../hooks/useTauri';
 
