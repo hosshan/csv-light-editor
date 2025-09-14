@@ -55,10 +55,7 @@ class TauriAPI {
 
   async openCsvFile(path: string): Promise<CsvData> {
     try {
-      console.log('Invoking open_csv_file with path:', path);
-      const result = await invoke<CsvData>('open_csv_file', { path });
-      console.log('Received CSV data from Tauri:', result);
-      return result;
+      return await invoke<CsvData>('open_csv_file', { path });
     } catch (error) {
       console.error('Failed to open CSV file:', error);
       throw new Error(`Failed to open CSV file: ${error}`);
