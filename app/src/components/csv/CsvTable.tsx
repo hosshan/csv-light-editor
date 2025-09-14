@@ -107,7 +107,6 @@ export function CsvTable() {
       e.preventDefault();
       if (editingCell) {
         updateCell(editingCell, editValue);
-        stopEditing();
         // Move to next row after saving
         if (data && editingCell.row < data.rows.length - 1) {
           const nextCell = {
@@ -117,12 +116,15 @@ export function CsvTable() {
           };
           selectCell(nextCell);
         }
+        // Return focus to table for arrow key navigation
+        setTimeout(() => {
+          parentRef.current?.focus();
+        }, 0);
       }
     } else if (e.key === 'Tab') {
       e.preventDefault();
       if (editingCell) {
         updateCell(editingCell, editValue);
-        stopEditing();
         // Move to next column after saving
         if (data && editingCell.column < data.headers.length - 1) {
           const nextCell = {
@@ -132,10 +134,18 @@ export function CsvTable() {
           };
           selectCell(nextCell);
         }
+        // Return focus to table for arrow key navigation
+        setTimeout(() => {
+          parentRef.current?.focus();
+        }, 0);
       }
     } else if (e.key === 'Escape') {
       // Cancel editing without saving
       stopEditing();
+      // Return focus to table for arrow key navigation
+      setTimeout(() => {
+        parentRef.current?.focus();
+      }, 0);
     }
   };
 
@@ -255,7 +265,10 @@ export function CsvTable() {
                         onBlur={() => {
                           if (editingCell) {
                             updateCell(editingCell, editValue);
-                            stopEditing();
+                            // Return focus to table for arrow key navigation
+                            setTimeout(() => {
+                              parentRef.current?.focus();
+                            }, 0);
                           }
                         }}
                         className="w-full bg-transparent border-none outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground"

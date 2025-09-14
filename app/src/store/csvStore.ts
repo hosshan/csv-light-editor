@@ -96,13 +96,17 @@ export const useCsvStore = create<CsvState>()(
           newRows[cell.row][cell.column] = value;
         }
 
+        // Keep the cell selected after updating so navigation continues to work
+        const updatedCell = { ...cell, value };
+
         set({
           data: {
             ...state.data,
             rows: newRows
           },
           hasUnsavedChanges: true,
-          editingCell: null
+          editingCell: null,
+          selectedCell: updatedCell
         });
       },
 
