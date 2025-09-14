@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileText, BarChart3, Filter, Calculator } from 'lucide-react';
 import { useCsvStore } from '../../store/csvStore';
 import { formatNumber, formatFileSize } from '../../lib/utils';

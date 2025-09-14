@@ -5,6 +5,7 @@ import type { CsvData, CsvCell, CsvSelection, ViewportRange, FilterConfig, SortC
 interface CsvState {
   // Data state
   data: CsvData | null;
+  currentFilePath: string | null;
   isLoading: boolean;
   error: string | null;
 
@@ -24,7 +25,8 @@ interface CsvState {
   sorts: SortConfig[];
 
   // Actions
-  setData: (data: CsvData) => void;
+  setData: (data: CsvData, filePath?: string) => void;
+  setCurrentFilePath: (path: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 
@@ -54,6 +56,7 @@ export const useCsvStore = create<CsvState>()(
     (set, get) => ({
       // Initial state
       data: null,
+      currentFilePath: null,
       isLoading: false,
       error: null,
 
@@ -74,7 +77,12 @@ export const useCsvStore = create<CsvState>()(
       sorts: [],
 
       // Actions
-      setData: (data) => set({ data, error: null }),
+      setData: (data, filePath) => set({
+        data,
+        error: null,
+        currentFilePath: filePath || get().currentFilePath
+      }),
+      setCurrentFilePath: (currentFilePath) => set({ currentFilePath }),
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error, isLoading: false }),
 
@@ -149,6 +157,7 @@ export const useCsvStore = create<CsvState>()(
 
       reset: () => set({
         data: null,
+        currentFilePath: null,
         isLoading: false,
         error: null,
         selectedCell: null,

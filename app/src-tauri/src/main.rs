@@ -19,6 +19,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::open_csv_file,
             commands::save_csv_file,
+            commands::save_csv_file_as,
+            commands::get_current_file,
             commands::get_csv_chunk,
             commands::get_csv_metadata,
             commands::validate_csv_file,

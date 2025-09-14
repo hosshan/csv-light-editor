@@ -1,7 +1,8 @@
-import React from 'react';
+import { useCallback } from 'react';
 import {
   FolderOpen,
   Save,
+  SaveAll,
   Undo,
   Redo,
   Filter,
@@ -9,18 +10,24 @@ import {
   Settings,
   FileText
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { useCsvStore } from '../../store/csvStore';
 import { useTauri } from '../../hooks/useTauri';
 
-export function Toolbar() {
+interface ToolbarProps {
+  onSave?: () => void;
+  onSaveAs?: () => void;
+}
+
+export function Toolbar({ onSave, onSaveAs }: ToolbarProps = {}) {
   const {
     data,
+    currentFilePath,
     hasUnsavedChanges,
     setLoading,
     setData,
-    setError,
-    reset
+    setCurrentFilePath,
+    setError
   } = useCsvStore();
   const tauri = useTauri();
 
@@ -31,7 +38,8 @@ export function Toolbar() {
 
       if (filePath) {
         const csvData = await tauri.openCsvFile(filePath);
-        setData(csvData);
+        setData(csvData, filePath);
+        setCurrentFilePath(filePath);
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to open file');
@@ -40,20 +48,17 @@ export function Toolbar() {
     }
   };
 
-  const handleSaveFile = async () => {
-    if (!data) return;
-
-    try {
-      setLoading(true);
-      await tauri.saveCsvFile(data.metadata.path, data);
-      // Mark as saved in store
-      useCsvStore.getState().markSaved();
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to save file');
-    } finally {
-      setLoading(false);
+  const handleSaveFile = useCallback(() => {
+    if (onSave) {
+      onSave();
     }
-  };
+  }, [onSave]);
+
+  const handleSaveAsFile = useCallback(() => {
+    if (onSaveAs) {
+      onSaveAs();
+    }
+  }, [onSaveAs]);
 
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-background border-b border-border">
@@ -76,9 +81,22 @@ export function Toolbar() {
             onClick={handleSaveFile}
             disabled={!data || !hasUnsavedChanges}
             className="flex items-center space-x-1"
+            title="Save (⌘S)"
           >
             <Save className="h-4 w-4" />
             <span>Save</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSaveAsFile}
+            disabled={!data}
+            className="flex items-center space-x-1"
+            title="Save As... (⌘⇧S)"
+          >
+            <SaveAll className="h-4 w-4" />
+            <span>Save As</span>
           </Button>
         </div>
 
@@ -132,9 +150,11 @@ export function Toolbar() {
         {data && (
           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
             <FileText className="h-4 w-4" />
-            <span>{data.metadata.filename}</span>
+            <span>
+              {currentFilePath ? currentFilePath.split('/').pop() : 'Untitled'}
+            </span>
             {hasUnsavedChanges && (
-              <span className="text-orange-500">•</span>
+              <span className="text-orange-500">• Unsaved</span>
             )}
           </div>
         )}

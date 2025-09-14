@@ -1,10 +1,13 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::fs;
 use tauri::State;
 use crate::csv_engine::{CsvReader, CsvWriter};
 use crate::csv_engine::reader::CsvData;
 use crate::metadata::CsvMetadata;
 use crate::state::AppState;
 use crate::utils::AppError;
+use encoding_rs::{UTF_8, SHIFT_JIS, EUC_JP};
+use chrono::Local;
 
 #[tauri::command]
 pub async fn open_csv_file(
@@ -43,10 +46,83 @@ pub async fn save_csv_file(
 
     writer.write_file(path, &data)?;
 
-    let state = state.lock().await;
+    let mut state = state.lock().await;
+    state.current_file = Some(path.to_path_buf());
     state.metadata_manager.save_metadata(path, &data.metadata)?;
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn save_csv_file_as(
+    path: String,
+    data: CsvData,
+    format: Option<String>,
+    encoding: Option<String>,
+    create_backup: bool,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let path = Path::new(&path);
+
+    // Create backup if requested and file exists
+    if create_backup && path.exists() {
+        let backup_path = create_backup_path(path)?;
+        fs::copy(path, &backup_path)
+            .map_err(|e| AppError::new(format!("Failed to create backup: {}", e), "BACKUP_ERROR"))?;
+    }
+
+    // Determine delimiter based on format
+    let delimiter = match format.as_deref() {
+        Some("tsv") => b'\t',
+        Some("csv") | _ => b',',
+    };
+
+    // Determine encoding
+    let encoding_type = match encoding.as_deref() {
+        Some("shift_jis") => SHIFT_JIS,
+        Some("euc_jp") => EUC_JP,
+        Some("utf8") | _ => UTF_8,
+    };
+
+    let writer = CsvWriter::new()
+        .with_delimiter(delimiter)
+        .with_encoding(encoding_type);
+
+    writer.write_file(path, &data)?;
+
+    let mut state = state.lock().await;
+    state.current_file = Some(path.to_path_buf());
+    state.metadata_manager.save_metadata(path, &data.metadata)?;
+
+    Ok(())
+}
+
+fn create_backup_path(original_path: &Path) -> Result<PathBuf, AppError> {
+    let timestamp = Local::now().format("%Y%m%d_%H%M%S");
+    let file_stem = original_path.file_stem()
+        .ok_or_else(|| AppError::new("Invalid file path".to_string(), "INVALID_PATH"))?;
+    let extension = original_path.extension()
+        .ok_or_else(|| AppError::new("No file extension".to_string(), "NO_EXTENSION"))?;
+
+    let backup_name = format!(
+        "{}_{}.{}.bak",
+        file_stem.to_string_lossy(),
+        timestamp,
+        extension.to_string_lossy()
+    );
+
+    let parent = original_path.parent()
+        .ok_or_else(|| AppError::new("No parent directory".to_string(), "NO_PARENT"))?;
+
+    Ok(parent.join(backup_name))
+}
+
+#[tauri::command]
+pub async fn get_current_file(
+    state: State<'_, AppState>,
+) -> Result<Option<String>, AppError> {
+    let state = state.lock().await;
+    Ok(state.current_file.as_ref().map(|p| p.to_string_lossy().to_string()))
 }
 
 #[tauri::command]
