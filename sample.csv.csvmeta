@@ -1,0 +1,11 @@
+{
+  "filename": "sample.csv",
+  "path": "/Users/hosakashun/dev_personal/csv-light-editor/sample.csv",
+  "rowCount": 10,
+  "columnCount": 4,
+  "hasHeaders": true,
+  "delimiter": ",",
+  "encoding": "UTF-8",
+  "fileSize": 435,
+  "lastModified": "SystemTime { tv_sec: 1757857199, tv_nsec: 377409236 }"
+}
