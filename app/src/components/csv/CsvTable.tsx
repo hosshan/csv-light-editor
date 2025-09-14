@@ -16,6 +16,11 @@ export function CsvTable() {
 
   const [editValue, setEditValue] = useState('');
 
+  // Debug log
+  console.log('CsvTable render - data:', data);
+  console.log('Data rows count:', data?.rows?.length);
+  console.log('Data headers count:', data?.headers?.length);
+
   const parentRef = useRef<HTMLDivElement>(null);
 
   // Virtual scrolling for rows
@@ -34,6 +39,9 @@ export function CsvTable() {
     overscan: 5,
     horizontal: true,
   });
+
+  console.log('Row virtualizer items:', rowVirtualizer.getVirtualItems());
+  console.log('Column virtualizer items:', columnVirtualizer.getVirtualItems());
 
   useEffect(() => {
     if (editingCell && data) {
@@ -91,9 +99,10 @@ export function CsvTable() {
 
           {/* Column headers */}
           <div
-            className="flex"
+            className="flex relative"
             style={{
               width: columnVirtualizer.getTotalSize(),
+              height: '40px',
             }}
           >
             {columnVirtualizer.getVirtualItems().map((virtualColumn) => (
@@ -120,7 +129,7 @@ export function CsvTable() {
       <div
         ref={parentRef}
         className="flex-1 overflow-auto"
-        style={{ contain: 'strict' }}
+        style={{ minHeight: '400px' }}
       >
         <div
           style={{

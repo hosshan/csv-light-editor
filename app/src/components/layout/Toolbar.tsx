@@ -27,13 +27,18 @@ export function Toolbar() {
   const handleOpenFile = async () => {
     try {
       setLoading(true);
+      console.log('Opening file dialog...');
       const filePath = await tauri.openFileDialog();
+      console.log('Selected file:', filePath);
 
       if (filePath) {
+        console.log('Loading CSV file...');
         const csvData = await tauri.openCsvFile(filePath);
+        console.log('CSV data received:', csvData);
         setData(csvData);
       }
     } catch (error) {
+      console.error('Error opening file:', error);
       setError(error instanceof Error ? error.message : 'Failed to open file');
     } finally {
       setLoading(false);

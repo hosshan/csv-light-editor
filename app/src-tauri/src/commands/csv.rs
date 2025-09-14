@@ -89,3 +89,32 @@ pub async fn get_csv_metadata(
 
     Ok(metadata)
 }
+
+#[tauri::command]
+pub async fn validate_csv_file(path: String) -> Result<bool, AppError> {
+    let path = Path::new(&path);
+
+    if !path.exists() {
+        return Err(AppError::new(
+            format!("File not found: {}", path.display()),
+            "FILE_NOT_FOUND",
+        ));
+    }
+
+    // Check file extension
+    if let Some(extension) = path.extension() {
+        let ext = extension.to_string_lossy().to_lowercase();
+        if !["csv", "tsv"].contains(&ext.as_str()) {
+            return Ok(false);
+        }
+    } else {
+        return Ok(false);
+    }
+
+    // Try to read first few lines to validate CSV format
+    let mut reader = CsvReader::new();
+    match reader.read_chunk(path, 0, 5) {
+        Ok(_) => Ok(true),
+        Err(_) => Ok(false),
+    }
+}
