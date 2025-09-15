@@ -28,6 +28,8 @@ export interface CsvSelection {
   endRow: number;
   endColumn: number;
   type: 'cell' | 'row' | 'column' | 'range';
+  anchorRow?: number;
+  anchorColumn?: number;
 }
 
 export interface ViewportRange {

@@ -74,11 +74,13 @@ export function CsvTable() {
 
   const handleRowHeaderClick = (rowIndex: number, event?: React.MouseEvent) => {
     event?.preventDefault();
+    event?.stopPropagation();
     selectRow(rowIndex);
   };
 
   const handleColumnHeaderClick = (columnIndex: number, event?: React.MouseEvent) => {
     event?.preventDefault();
+    event?.stopPropagation();
     selectColumn(columnIndex);
   };
 
@@ -99,10 +101,21 @@ export function CsvTable() {
       return;
     }
 
-    // If no cell is selected, don't handle navigation
-    if (!selectedCell) return;
+    // If no cell is selected and no range is selected, don't handle navigation
+    if (!selectedCell && !selectedRange) return;
 
-    const { row, column } = selectedCell;
+    // Use current selection or start of range for navigation
+    let row: number, column: number;
+    if (selectedCell) {
+      row = selectedCell.row;
+      column = selectedCell.column;
+    } else if (selectedRange) {
+      row = selectedRange.startRow;
+      column = selectedRange.startColumn;
+    } else {
+      return; // Should not reach here due to check above
+    }
+
     let newRow = row;
     let newColumn = column;
 
@@ -172,12 +185,16 @@ export function CsvTable() {
       case 'Enter':
       case 'F2':
         e.preventDefault();
-        startEditing(selectedCell);
+        if (selectedCell) {
+          startEditing(selectedCell);
+        }
         return;
       case 'Delete':
       case 'Backspace':
         e.preventDefault();
-        updateCell(selectedCell, '');
+        if (selectedCell) {
+          updateCell(selectedCell, '');
+        }
         return;
     }
 
@@ -291,8 +308,9 @@ export function CsvTable() {
           {/* Row number column header */}
           <div
             className="w-12 h-10 border-r border-border bg-muted/80 flex items-center justify-center text-xs font-medium cursor-pointer hover:bg-accent"
-            onClick={(e) => {
+            onMouseDown={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               selectAll();
             }}
           >
@@ -336,7 +354,11 @@ export function CsvTable() {
                       height: '40px',
                       transform: `translateX(${virtualColumn.start}px)`,
                     }}
-                    onClick={(e) => handleColumnHeaderClick(virtualColumn.index, e)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleColumnHeaderClick(virtualColumn.index, e);
+                    }}
                   >
                     {data.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
                   </div>
@@ -384,7 +406,11 @@ export function CsvTable() {
                   height: virtualRow.size,
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
-                onClick={(e) => handleRowHeaderClick(virtualRow.index, e)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleRowHeaderClick(virtualRow.index, e);
+                }}
               >
                 {virtualRow.index + 1}
               </div>

@@ -119,7 +119,6 @@ export const useCsvStore = create<CsvState>()(
           endColumn: columnIndex,
           type: 'column'
         };
-
         set({ selectedRange: selection, selectedCell: null });
       },
 
@@ -141,25 +140,32 @@ export const useCsvStore = create<CsvState>()(
       extendSelection: (cell) => {
         const state = get();
 
-        // If there's already a selection, extend it
-        if (state.selectedRange) {
-          const newSelection: CsvSelection = {
-            startRow: Math.min(state.selectedRange.startRow, cell.row),
-            startColumn: Math.min(state.selectedRange.startColumn, cell.column),
-            endRow: Math.max(state.selectedRange.endRow, cell.row),
-            endColumn: Math.max(state.selectedRange.endColumn, cell.column),
-            type: 'range'
-          };
-          set({ selectedRange: newSelection, selectedCell: null });
-        }
         // If there's a selected cell, create a range from that cell to the new cell
-        else if (state.selectedCell) {
+        if (state.selectedCell) {
           const newSelection: CsvSelection = {
             startRow: Math.min(state.selectedCell.row, cell.row),
             startColumn: Math.min(state.selectedCell.column, cell.column),
             endRow: Math.max(state.selectedCell.row, cell.row),
             endColumn: Math.max(state.selectedCell.column, cell.column),
-            type: 'range'
+            type: 'range',
+            anchorRow: state.selectedCell.row,
+            anchorColumn: state.selectedCell.column
+          };
+          set({ selectedRange: newSelection, selectedCell: null });
+        }
+        // If there's already a selection, extend it from the anchor point
+        else if (state.selectedRange) {
+          const anchorRow = state.selectedRange.anchorRow ?? state.selectedRange.startRow;
+          const anchorColumn = state.selectedRange.anchorColumn ?? state.selectedRange.startColumn;
+
+          const newSelection: CsvSelection = {
+            startRow: Math.min(anchorRow, cell.row),
+            startColumn: Math.min(anchorColumn, cell.column),
+            endRow: Math.max(anchorRow, cell.row),
+            endColumn: Math.max(anchorColumn, cell.column),
+            type: 'range',
+            anchorRow,
+            anchorColumn
           };
           set({ selectedRange: newSelection, selectedCell: null });
         }
