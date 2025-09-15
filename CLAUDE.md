@@ -58,20 +58,23 @@ cargo fmt           # Format Rust code
 ### Technology Stack
 - **Backend**: Rust with Tauri v1, using `csv`, `polars`, and `candle` crates
 - **Frontend**: React 19 with TypeScript, Vite bundler
-- **UI Components**: TanStack Virtual for virtualization, Radix UI for components
+- **UI Components**: shadcn/ui (built on Radix UI primitives), TanStack Virtual for virtualization
+- **Styling**: Tailwind CSS with design system tokens
 - **State Management**: Zustand for frontend state
 - **AI Features**: Candle for local inference (planned)
 
-## Development Phases
+## UI Development Guidelines
 
-The project follows a 12-week implementation plan:
-- Phase 1-2: Foundation and project setup
-- Phase 3-4: Core CSV viewing and editing
-- Phase 5-6: Advanced editing features
-- Phase 7-8: Calculation engine
-- Phase 9-10: AI features
-- Phase 11: Export functionality
-- Phase 12: Optimization and distribution
+### Component Standards
+- **Use shadcn/ui components**: All new UI components should use shadcn/ui for consistency
+- **Existing components**: Button, Dialog, Select, Label, Checkbox are available
+- **Custom components**: Follow shadcn/ui patterns when creating new components
+- **Styling**: Use Tailwind CSS classes with design system tokens (e.g., `bg-background`, `text-foreground`)
+
+### Component Development
+- Add new shadcn/ui components to `/src/components/ui/` as needed
+- Maintain consistent import patterns using `@/components/ui/component-name`
+- Follow shadcn/ui documentation for component APIs and styling
 
 ## Tauri Configuration Notes
 
