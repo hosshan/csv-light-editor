@@ -16,7 +16,6 @@ export function CsvTable() {
   } = useCsvStore();
 
   const [editValue, setEditValue] = useState('');
-  const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
 
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -47,36 +46,6 @@ export function CsvTable() {
         : undefined,
   });
 
-  // ResizeObserver for dynamic size calculation
-  useEffect(() => {
-    if (!parentRef.current) return;
-
-    const element = parentRef.current;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) {
-          setContainerSize(prev => {
-            // Only update if size actually changed to prevent infinite loops
-            if (prev.width !== width || prev.height !== height) {
-              return { width, height };
-            }
-            return prev;
-          });
-        }
-      }
-    });
-
-    // Initial size calculation
-    const rect = element.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      setContainerSize({ width: rect.width, height: rect.height });
-    }
-
-    resizeObserver.observe(element);
-    return () => resizeObserver.disconnect();
-  }, []);
 
   useEffect(() => {
     if (editingCell && data) {
@@ -233,19 +202,14 @@ export function CsvTable() {
     console.log('CsvTable Debug:', {
       dataLength: data?.rows.length || 0,
       headersLength: data?.headers.length || 0,
-      containerSize,
       hasData: !!data
     });
-  }, [data, containerSize]);
+  }, [data]);
 
   return (
-    <div
-      ref={parentRef}
-      className="flex-1 flex flex-col bg-background relative"
-      style={{ minHeight: '400px' }} // Ensure minimum height
-    >
+    <div className="flex-1 flex flex-col bg-background relative overflow-hidden">
       {/* Column Headers */}
-      <div className="sticky top-0 z-10 bg-muted border-b border-border">
+      <div className="sticky top-0 z-10 bg-muted border-b border-border shrink-0">
         <div className="flex">
           {/* Row number column header */}
           <div className="w-12 h-10 border-r border-border bg-muted/80 flex items-center justify-center text-xs font-medium">
@@ -295,19 +259,13 @@ export function CsvTable() {
           "flex-1 overflow-auto focus:outline-none scroll-smooth",
           styles.scrollContainer
         )}
-        style={{
-          height: `${Math.max(containerSize.height - 80, 300)}px`, // Ensure minimum height
-          maxHeight: `${Math.max(containerSize.height - 80, 300)}px`,
-          contain: 'strict', // Performance optimization
-          willChange: 'scroll-position', // Hint for browser optimization
-        }}
         tabIndex={0}
         onKeyDown={handleKeyDown}
       >
         <div
           style={{
             height: rowVirtualizer.getTotalSize(),
-            width: Math.max(columnVirtualizer.getTotalSize() + 48, containerSize.width), // Use dynamic width
+            width: columnVirtualizer.getTotalSize() + 48,
             position: 'relative',
             minWidth: '100%',
           }}
