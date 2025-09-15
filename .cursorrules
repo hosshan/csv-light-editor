@@ -1,0 +1,130 @@
+# Cursor Rules for CSV Light Editor
+
+## プロジェクト概要
+
+CSV Light Editorは、Tauri（Rustバックエンド）とReact（TypeScriptフロントエンド）で構築されたMac向けの高性能CSV編集アプリケーションです。ストリーミングとバーチャルスクロール技術を使用して、100万行以上のCSVファイルを効率的に処理することを目標としています。
+
+## 開発コマンド
+
+### 開発環境
+```bash
+cd app
+pnpm install        # 依存関係のインストール
+pnpm tauri dev      # ホットリロード付き開発サーバーの実行
+```
+
+### ビルド
+```bash
+cd app
+pnpm build          # フロントエンドのビルド（TypeScriptチェック + Viteビルド）
+pnpm tauri build    # アプリのリリース版ビルド
+```
+
+### テスト
+```bash
+cd app/src-tauri
+cargo test          # Rustバックエンドのテスト実行
+cargo clippy        # Rustリンターの実行
+cargo fmt           # Rustコードのフォーマット
+```
+
+## アーキテクチャ
+
+### ディレクトリ構造
+- `/app` - メインアプリケーションディレクトリ
+  - `/src` - Reactフロントエンドソース（TypeScript）
+  - `/src-tauri` - Rustバックエンドソース（Tauri）
+    - `/src/main.rs` - Tauriアプリケーションのエントリーポイント
+    - `/Cargo.toml` - Rust依存関係
+    - `/tauri.conf.json` - Tauri設定
+  - `/dist` - フロントエンドビルド出力
+  - `package.json` - フロントエンド依存関係とスクリプト
+  - `vite.config.ts` - Viteバンドラー設定
+
+- `/docs` - 包括的なプロジェクトドキュメント
+  - `requirements.md` - 機能要件と非機能要件
+  - `implementation-tasks.md` - 詳細なタスクを含む12週間の開発ロードマップ
+  - `technical-architecture.md` - システム設計とコンポーネントアーキテクチャ
+
+### 主要な設計パターン
+
+1. **IPC通信**: フロントエンドはTauriのコマンドシステムを介してRustバックエンドと通信
+2. **ストリーミング処理**: 大きなCSVファイルはパフォーマンス維持のためチャンク単位で処理
+3. **バーチャルスクロール**: UIは効率的なメモリ使用のため可視行のみレンダリング
+4. **メタデータサイドカー**: CSVメタデータはCSVファイルと並行して`.csvmeta`ファイルに保存
+
+### 技術スタック
+- **バックエンド**: Tauri v1を使用したRust、`csv`、`polars`、`candle`クレートを使用
+- **フロントエンド**: Viteバンドラーを使用したReact 19とTypeScript
+- **UIコンポーネント**: shadcn/ui（Radix UIプリミティブベース）、TanStack Virtual（仮想化用）
+- **スタイリング**: デザインシステムトークンを使用したTailwind CSS
+- **状態管理**: フロントエンド状態用のZustand
+- **AI機能**: ローカル推論用のCandle（予定）
+
+## UI開発ガイドライン
+
+### コンポーネント標準
+- **shadcn/uiコンポーネントを使用**: 一貫性のため、すべての新しいUIコンポーネントはshadcn/uiを使用する
+- **既存コンポーネント**: Button、Dialog、Select、Label、Checkboxが利用可能
+- **カスタムコンポーネント**: 新しいコンポーネントを作成する際はshadcn/uiパターンに従う
+- **スタイリング**: デザインシステムトークン（例：`bg-background`、`text-foreground`）を使用したTailwind CSSクラス
+
+### コンポーネント開発
+- 必要に応じて新しいshadcn/uiコンポーネントを`/src/components/ui/`に追加
+- `@/components/ui/component-name`を使用した一貫したインポートパターンを維持
+- コンポーネントAPIとスタイリングについてはshadcn/uiドキュメントに従う
+
+## Tauri設定メモ
+
+- **CSP**: セキュリティのため開発では無効化（`null`）
+- **許可されたAPI**: セキュリティのため`shell.open`のみ有効
+- **開発サーバー**: `http://localhost:1420`で実行
+- **バンドルID**: `io.hosshan.csv-light-editor`
+
+## コーディング規約
+
+### TypeScript/React
+- 関数コンポーネントとReact Hooksを使用
+- TypeScriptの厳密な型チェックを有効にする
+- コンポーネントは`PascalCase`、ファイル名は`PascalCase.tsx`
+- Propsインターフェースは`ComponentNameProps`の形式で命名
+
+### Rust
+- `snake_case`で関数と変数を命名
+- `PascalCase`で構造体と列挙型を命名
+- エラーハンドリングには`Result<T, E>`を使用
+- ドキュメンテーションコメント（`///`）を適切に使用
+
+### ファイル命名
+- Reactコンポーネント: `ComponentName.tsx`
+- Rustモジュール: `module_name.rs`
+- CSSモジュール: `ComponentName.module.css`
+- ユーティリティ: `utils.ts`または`utils.rs`
+
+## パフォーマンス考慮事項
+
+- 大きなCSVファイルの処理にはストリーミングを使用
+- UIレンダリングにはバーチャルスクロールを実装
+- メモリ使用量を監視し、必要に応じてガベージコレクションを最適化
+- Rustバックエンドでメモリ効率的なデータ構造を使用
+
+## セキュリティ考慮事項
+
+- ファイルシステムアクセスは最小限に制限
+- ユーザー入力の適切な検証とサニタイゼーション
+- CSP（Content Security Policy）の適切な設定
+- 機密データの適切な処理と保存
+
+## テスト戦略
+
+- 単体テスト: 各コンポーネントと関数の個別テスト
+- 統合テスト: フロントエンドとバックエンドの連携テスト
+- パフォーマンステスト: 大きなファイルでの処理速度テスト
+- エンドツーエンドテスト: ユーザーワークフローの完全テスト
+
+## デバッグとログ
+
+- 開発環境では詳細なログを有効にする
+- 本番環境では適切なログレベルを設定
+- エラーハンドリングとユーザーフレンドリーなエラーメッセージ
+- パフォーマンスメトリクスの収集と監視
