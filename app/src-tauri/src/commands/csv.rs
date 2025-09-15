@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::fs;
 use tauri::State;
-use crate::csv_engine::{CsvReader, CsvWriter};
+use crate::csv_engine::{reader::CsvReader, writer::CsvWriter};
 use crate::csv_engine::reader::CsvData;
 use crate::metadata::CsvMetadata;
 use crate::state::AppState;
@@ -23,12 +23,15 @@ pub async fn open_csv_file(
         ));
     }
 
+    // Always detect encoding and delimiter from the file itself
     let mut reader = CsvReader::new();
     let csv_data = reader.read_file(path)?;
 
     let mut state = state.lock().await;
     state.current_file = Some(path.to_path_buf());
-    state.metadata_manager.load_metadata(path)?;
+
+    // Load metadata for user preferences (not for encoding/delimiter)
+    state.metadata_manager.load_metadata(path).ok();
 
     Ok(csv_data)
 }
@@ -78,10 +81,10 @@ pub async fn save_csv_file_as(
     };
 
     // Determine encoding
-    let encoding_type = match encoding.as_deref() {
-        Some("shift_jis") => SHIFT_JIS,
-        Some("euc_jp") => EUC_JP,
-        Some("utf8") | _ => UTF_8,
+    let (encoding_type, encoding_name) = match encoding.as_deref() {
+        Some("shift_jis") => (SHIFT_JIS, "Shift_JIS"),
+        Some("euc_jp") => (EUC_JP, "EUC-JP"),
+        Some("utf8") | _ => (UTF_8, "UTF-8"),
     };
 
     let writer = CsvWriter::new()
@@ -90,9 +93,17 @@ pub async fn save_csv_file_as(
 
     writer.write_file(path, &data)?;
 
+    // Update metadata with the actual encoding used
+    let mut updated_metadata = data.metadata.clone();
+    updated_metadata.encoding = encoding_name.to_string();
+    updated_metadata.delimiter = match delimiter {
+        b'\t' => "\t".to_string(),
+        _ => String::from_utf8(vec![delimiter]).unwrap_or(",".to_string()),
+    };
+
     let mut state = state.lock().await;
     state.current_file = Some(path.to_path_buf());
-    state.metadata_manager.save_metadata(path, &data.metadata)?;
+    state.metadata_manager.save_metadata(path, &updated_metadata)?;
 
     Ok(())
 }

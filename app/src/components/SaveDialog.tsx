@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useCsvStore } from '../store/csvStore';
 import type { SaveOptions } from '../hooks/useTauri';
 
 interface SaveDialogProps {
@@ -10,9 +11,27 @@ interface SaveDialogProps {
 }
 
 export function SaveDialog({ isOpen, onClose, onSave, title = 'Save As' }: SaveDialogProps) {
+  const { data } = useCsvStore();
+
+  // Initialize encoding based on current file's encoding
+  const getInitialEncoding = (): 'utf8' | 'shift_jis' | 'euc_jp' => {
+    if (!data?.metadata?.encoding) return 'utf8';
+    const enc = data.metadata.encoding.toLowerCase();
+    if (enc.includes('shift') || enc.includes('sjis')) return 'shift_jis';
+    if (enc.includes('euc')) return 'euc_jp';
+    return 'utf8';
+  };
+
   const [format, setFormat] = useState<'csv' | 'tsv'>('csv');
-  const [encoding, setEncoding] = useState<'utf8' | 'shift_jis' | 'euc_jp'>('utf8');
+  const [encoding, setEncoding] = useState<'utf8' | 'shift_jis' | 'euc_jp'>(getInitialEncoding());
   const [createBackup, setCreateBackup] = useState(false);
+
+  // Reset encoding when dialog opens with a new file
+  useEffect(() => {
+    if (isOpen) {
+      setEncoding(getInitialEncoding());
+    }
+  }, [isOpen, data?.metadata?.encoding]);
 
   if (!isOpen) return null;
 

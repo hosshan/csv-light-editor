@@ -41,6 +41,11 @@ impl CsvReader {
         self
     }
 
+    pub fn with_encoding(mut self, encoding: &'static Encoding) -> Self {
+        self.encoding = encoding;
+        self
+    }
+
     pub fn detect_encoding(&mut self, path: &Path) -> Result<&'static Encoding> {
         let mut file = File::open(path)?;
         let mut buffer = vec![0; 8192];
@@ -85,6 +90,7 @@ impl CsvReader {
     }
 
     pub fn read_file(&mut self, path: &Path) -> Result<CsvData> {
+        // Always detect encoding and delimiter from the file
         self.detect_encoding(path)?;
         self.detect_delimiter(path)?;
 
