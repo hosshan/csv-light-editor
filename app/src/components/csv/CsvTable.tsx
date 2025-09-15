@@ -16,11 +16,6 @@ export function CsvTable() {
 
   const [editValue, setEditValue] = useState('');
 
-  // Debug log
-  console.log('CsvTable render - data:', data);
-  console.log('Data rows count:', data?.rows?.length);
-  console.log('Data headers count:', data?.headers?.length);
-
   const parentRef = useRef<HTMLDivElement>(null);
 
   // Virtual scrolling for rows
@@ -39,9 +34,6 @@ export function CsvTable() {
     overscan: 5,
     horizontal: true,
   });
-
-  console.log('Row virtualizer items:', rowVirtualizer.getVirtualItems());
-  console.log('Column virtualizer items:', columnVirtualizer.getVirtualItems());
 
   useEffect(() => {
     if (editingCell && data) {
@@ -64,15 +56,96 @@ export function CsvTable() {
     startEditing(cell);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!data || !selectedCell || editingCell) return;
+
+    const { row, column } = selectedCell;
+    let newRow = row;
+    let newColumn = column;
+
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        newRow = Math.max(0, row - 1);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        newRow = Math.min(data.rows.length - 1, row + 1);
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        newColumn = Math.max(0, column - 1);
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        newColumn = Math.min(data.headers.length - 1, column + 1);
+        break;
+      case 'Enter':
+      case 'F2':
+        e.preventDefault();
+        startEditing(selectedCell);
+        return;
+      case 'Delete':
+      case 'Backspace':
+        e.preventDefault();
+        updateCell(selectedCell, '');
+        return;
+    }
+
+    if (newRow !== row || newColumn !== column) {
+      const newCell = {
+        row: newRow,
+        column: newColumn,
+        value: data.rows[newRow]?.[newColumn] || ''
+      };
+      selectCell(newCell);
+    }
+  };
+
   const handleEditKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === 'Tab') {
+    if (e.key === 'Enter') {
       e.preventDefault();
       if (editingCell) {
         updateCell(editingCell, editValue);
-        stopEditing();
+        // Move to next row after saving
+        if (data && editingCell.row < data.rows.length - 1) {
+          const nextCell = {
+            row: editingCell.row + 1,
+            column: editingCell.column,
+            value: data.rows[editingCell.row + 1]?.[editingCell.column] || ''
+          };
+          selectCell(nextCell);
+        }
+        // Return focus to table for arrow key navigation
+        setTimeout(() => {
+          parentRef.current?.focus();
+        }, 0);
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      if (editingCell) {
+        updateCell(editingCell, editValue);
+        // Move to next column after saving
+        if (data && editingCell.column < data.headers.length - 1) {
+          const nextCell = {
+            row: editingCell.row,
+            column: editingCell.column + 1,
+            value: data.rows[editingCell.row]?.[editingCell.column + 1] || ''
+          };
+          selectCell(nextCell);
+        }
+        // Return focus to table for arrow key navigation
+        setTimeout(() => {
+          parentRef.current?.focus();
+        }, 0);
       }
     } else if (e.key === 'Escape') {
+      // Cancel editing without saving
       stopEditing();
+      // Return focus to table for arrow key navigation
+      setTimeout(() => {
+        parentRef.current?.focus();
+      }, 0);
     }
   };
 
@@ -128,8 +201,10 @@ export function CsvTable() {
       {/* Table Body with Virtual Scrolling */}
       <div
         ref={parentRef}
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-auto focus:outline-none"
         style={{ minHeight: '400px' }}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
       >
         <div
           style={{
@@ -166,8 +241,8 @@ export function CsvTable() {
                     className={cn(
                       'border-r border-b border-border bg-background flex items-center px-2 text-sm cursor-cell transition-colors hover:bg-accent',
                       {
-                        'bg-primary/10 border-primary z-10': isSelected && !isEditing,
-                        'bg-background border-primary z-20': isEditing,
+                        'bg-primary/10 border-primary border-2 z-10': isSelected && !isEditing,
+                        'bg-accent border-primary border-2 z-20 ring-2 ring-primary/50': isEditing,
                       }
                     )}
                     style={{
@@ -190,11 +265,16 @@ export function CsvTable() {
                         onBlur={() => {
                           if (editingCell) {
                             updateCell(editingCell, editValue);
-                            stopEditing();
+                            // Return focus to table for arrow key navigation
+                            setTimeout(() => {
+                              parentRef.current?.focus();
+                            }, 0);
                           }
                         }}
-                        className="w-full bg-transparent border-none outline-none"
+                        className="w-full bg-transparent border-none outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground"
                         autoFocus
+                        autoComplete="off"
+                        spellCheck={false}
                       />
                     ) : (
                       <span className="truncate w-full" title={cellValue}>

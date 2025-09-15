@@ -1,17 +1,99 @@
-import React from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Toolbar } from './components/layout/Toolbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { CsvTable } from './components/csv/CsvTable';
+import { SaveDialog } from './components/SaveDialog';
 import { useCsvStore } from './store/csvStore';
+import { useTauri } from './hooks/useTauri';
 import { Loader2 } from 'lucide-react';
+import type { SaveOptions } from './hooks/useTauri';
 
 function App() {
-  const { isLoading, error } = useCsvStore();
+  const { data, currentFilePath, hasUnsavedChanges, isLoading, error, setCurrentFilePath, markSaved, setError } = useCsvStore();
+  const tauriAPI = useTauri();
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [saveMode, setSaveMode] = useState<'save' | 'saveAs'>('save');
+
+  const handleSave = useCallback(async () => {
+    if (!data) return;
+
+    try {
+      if (currentFilePath) {
+        await tauriAPI.saveCsvFile(currentFilePath, data);
+        markSaved();
+      } else {
+        setSaveMode('saveAs');
+        setShowSaveDialog(true);
+      }
+    } catch (error) {
+      setError(String(error));
+    }
+  }, [data, currentFilePath, tauriAPI, markSaved, setError]);
+
+  const handleSaveAs = useCallback(async (options?: SaveOptions) => {
+    if (!data) return;
+
+    try {
+      const defaultName = currentFilePath ?
+        currentFilePath.split('/').pop()?.replace(/\.[^/.]+$/, '') :
+        'untitled';
+
+      const filePath = await tauriAPI.saveFileDialog(
+        `${defaultName}.${options?.format || 'csv'}`,
+        options?.format || 'csv'
+      );
+
+      if (filePath) {
+        if (options) {
+          await tauriAPI.saveCsvFileAs(filePath, data, options);
+        } else {
+          await tauriAPI.saveCsvFile(filePath, data);
+        }
+        setCurrentFilePath(filePath);
+        markSaved();
+      }
+    } catch (error) {
+      setError(String(error));
+    } finally {
+      setShowSaveDialog(false);
+    }
+  }, [data, currentFilePath, tauriAPI, setCurrentFilePath, markSaved, setError]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 's') {
+        e.preventDefault();
+        setSaveMode('saveAs');
+        setShowSaveDialog(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
       {/* Toolbar */}
-      <Toolbar />
+      <Toolbar onSave={handleSave} onSaveAs={() => {
+        setSaveMode('saveAs');
+        setShowSaveDialog(true);
+      }} />
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
@@ -39,6 +121,13 @@ function App() {
           <CsvTable />
         </div>
       </div>
+
+      <SaveDialog
+        isOpen={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        onSave={handleSaveAs}
+        title={saveMode === 'saveAs' ? 'Save As' : 'Save'}
+      />
     </div>
   );
 }

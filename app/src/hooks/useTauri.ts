@@ -1,10 +1,18 @@
 import { invoke } from '@tauri-apps/api/tauri';
-import { open } from '@tauri-apps/api/dialog';
+import { open, save } from '@tauri-apps/api/dialog';
 import type { CsvData, CsvMetadata } from '../types/csv';
+
+export interface SaveOptions {
+  format?: 'csv' | 'tsv';
+  encoding?: 'utf8' | 'shift_jis' | 'euc_jp';
+  createBackup?: boolean;
+}
 
 export interface TauriCommands {
   openCsvFile: (path: string) => Promise<CsvData>;
   saveCsvFile: (path: string, data: CsvData) => Promise<void>;
+  saveCsvFileAs: (path: string, data: CsvData, options: SaveOptions) => Promise<void>;
+  getCurrentFile: () => Promise<string | null>;
   getCsvChunk: (path: string, startRow: number, endRow: number) => Promise<string[][]>;
   getCsvMetadata: (path: string) => Promise<CsvMetadata>;
   validateCsvFile: (path: string) => Promise<boolean>;
@@ -34,19 +42,24 @@ class TauriAPI {
     }
   }
 
-  async saveFileDialog(): Promise<string | null> {
+  async saveFileDialog(defaultPath?: string, format: 'csv' | 'tsv' = 'csv'): Promise<string | null> {
     try {
-      const selected = await open({
-        multiple: false,
+      const extension = format === 'tsv' ? 'tsv' : 'csv';
+      const selected = await save({
+        defaultPath,
         filters: [
           {
-            name: 'CSV Files',
-            extensions: ['csv']
+            name: format === 'tsv' ? 'TSV Files' : 'CSV Files',
+            extensions: [extension]
+          },
+          {
+            name: 'All Files',
+            extensions: ['*']
           }
         ]
       });
 
-      return Array.isArray(selected) ? selected[0] : selected;
+      return selected || null;
     } catch (error) {
       console.error('Failed to open save dialog:', error);
       return null;
@@ -55,10 +68,7 @@ class TauriAPI {
 
   async openCsvFile(path: string): Promise<CsvData> {
     try {
-      console.log('Invoking open_csv_file with path:', path);
-      const result = await invoke<CsvData>('open_csv_file', { path });
-      console.log('Received CSV data from Tauri:', result);
-      return result;
+      return await invoke<CsvData>('open_csv_file', { path });
     } catch (error) {
       console.error('Failed to open CSV file:', error);
       throw new Error(`Failed to open CSV file: ${error}`);
@@ -71,6 +81,35 @@ class TauriAPI {
     } catch (error) {
       console.error('Failed to save CSV file:', error);
       throw new Error(`Failed to save CSV file: ${error}`);
+    }
+  }
+
+  async saveCsvFileAs(
+    path: string,
+    data: CsvData,
+    options: SaveOptions = {}
+  ): Promise<void> {
+    try {
+      await invoke('save_csv_file_as', {
+        path,
+        data,
+        format: options.format,
+        encoding: options.encoding,
+        createBackup: options.createBackup || false
+      });
+    } catch (error) {
+      console.error('Failed to save CSV file as:', error);
+      throw new Error(`Failed to save CSV file: ${error}`);
+    }
+  }
+
+  async getCurrentFile(): Promise<string | null> {
+    try {
+      const result = await invoke<string | null>('get_current_file');
+      return result || null;
+    } catch (error) {
+      console.error('Failed to get current file:', error);
+      return null;
     }
   }
 
