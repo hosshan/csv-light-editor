@@ -27,6 +27,7 @@ export interface CsvSelection {
   startColumn: number;
   endRow: number;
   endColumn: number;
+  type: 'cell' | 'row' | 'column' | 'range';
 }
 
 export interface ViewportRange {

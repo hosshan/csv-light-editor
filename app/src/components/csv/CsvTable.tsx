@@ -8,8 +8,13 @@ export function CsvTable() {
   const {
     data,
     selectedCell,
+    selectedRange,
     editingCell,
     selectCell,
+    selectRow,
+    selectColumn,
+    selectAll,
+    extendSelection,
     startEditing,
     stopEditing,
     updateCell
@@ -54,11 +59,27 @@ export function CsvTable() {
     }
   }, [editingCell, data]);
 
-  const handleCellClick = (row: number, column: number) => {
+  const handleCellClick = (row: number, column: number, event?: React.MouseEvent) => {
     if (!data) return;
 
     const cell = { row, column, value: data.rows[row]?.[column] || '' };
-    selectCell(cell);
+
+    // Handle shift+click for range selection
+    if (event?.shiftKey) {
+      extendSelection(cell);
+    } else {
+      selectCell(cell);
+    }
+  };
+
+  const handleRowHeaderClick = (rowIndex: number, event?: React.MouseEvent) => {
+    event?.preventDefault();
+    selectRow(rowIndex);
+  };
+
+  const handleColumnHeaderClick = (columnIndex: number, event?: React.MouseEvent) => {
+    event?.preventDefault();
+    selectColumn(columnIndex);
   };
 
   const handleCellDoubleClick = (row: number, column: number) => {
@@ -69,12 +90,68 @@ export function CsvTable() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!data || !selectedCell || editingCell) return;
+    if (!data || editingCell) return;
+
+    // Handle Ctrl+A for select all
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      e.preventDefault();
+      selectAll();
+      return;
+    }
+
+    // If no cell is selected, don't handle navigation
+    if (!selectedCell) return;
 
     const { row, column } = selectedCell;
     let newRow = row;
     let newColumn = column;
 
+    // Handle shift+arrow keys for range selection
+    if (e.shiftKey) {
+      let extendToCell: { row: number; column: number; value: string } | null = null;
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          extendToCell = {
+            row: Math.max(0, row - 1),
+            column,
+            value: data.rows[Math.max(0, row - 1)]?.[column] || ''
+          };
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          extendToCell = {
+            row: Math.min(data.rows.length - 1, row + 1),
+            column,
+            value: data.rows[Math.min(data.rows.length - 1, row + 1)]?.[column] || ''
+          };
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          extendToCell = {
+            row,
+            column: Math.max(0, column - 1),
+            value: data.rows[row]?.[Math.max(0, column - 1)] || ''
+          };
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          extendToCell = {
+            row,
+            column: Math.min(data.headers.length - 1, column + 1),
+            value: data.rows[row]?.[Math.min(data.headers.length - 1, column + 1)] || ''
+          };
+          break;
+      }
+
+      if (extendToCell) {
+        extendSelection(extendToCell);
+        return;
+      }
+    }
+
+    // Normal navigation
     switch (e.key) {
       case 'ArrowUp':
         e.preventDefault();
@@ -212,7 +289,13 @@ export function CsvTable() {
       <div className="sticky top-0 z-10 bg-muted border-b border-border shrink-0">
         <div className="flex">
           {/* Row number column header */}
-          <div className="w-12 h-10 border-r border-border bg-muted/80 flex items-center justify-center text-xs font-medium">
+          <div
+            className="w-12 h-10 border-r border-border bg-muted/80 flex items-center justify-center text-xs font-medium cursor-pointer hover:bg-accent"
+            onClick={(e) => {
+              e.preventDefault();
+              selectAll();
+            }}
+          >
             #
           </div>
 
@@ -231,22 +314,34 @@ export function CsvTable() {
                 height: '40px',
               }}
             >
-              {columnVirtualizer.getVirtualItems().map((virtualColumn) => (
-                <div
-                  key={virtualColumn.index}
-                  className="border-r border-border bg-muted/80 flex items-center px-2 text-xs font-medium truncate"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: virtualColumn.size,
-                    height: '40px',
-                    transform: `translateX(${virtualColumn.start}px)`,
-                  }}
-                >
-                  {data.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
-                </div>
-              ))}
+              {columnVirtualizer.getVirtualItems().map((virtualColumn) => {
+                const isColumnSelected = selectedRange?.type === 'column' &&
+                  selectedRange.startColumn <= virtualColumn.index &&
+                  selectedRange.endColumn >= virtualColumn.index;
+
+                return (
+                  <div
+                    key={virtualColumn.index}
+                    className={cn(
+                      "border-r border-border bg-muted/80 flex items-center px-2 text-xs font-medium truncate cursor-pointer hover:bg-accent transition-colors",
+                      {
+                        'bg-primary/20 border-primary': isColumnSelected
+                      }
+                    )}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: virtualColumn.size,
+                      height: '40px',
+                      transform: `translateX(${virtualColumn.start}px)`,
+                    }}
+                    onClick={(e) => handleColumnHeaderClick(virtualColumn.index, e)}
+                  >
+                    {data.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -274,7 +369,14 @@ export function CsvTable() {
             <div key={virtualRow.index} className="flex">
               {/* Row number */}
               <div
-                className="w-12 border-r border-b border-border bg-muted/50 flex items-center justify-center text-xs text-muted-foreground"
+                className={cn(
+                  "w-12 border-r border-b border-border bg-muted/50 flex items-center justify-center text-xs text-muted-foreground cursor-pointer hover:bg-accent transition-colors",
+                  {
+                    'bg-primary/20 border-primary': selectedRange?.type === 'row' &&
+                      selectedRange.startRow <= virtualRow.index &&
+                      selectedRange.endRow >= virtualRow.index
+                  }
+                )}
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -282,6 +384,7 @@ export function CsvTable() {
                   height: virtualRow.size,
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
+                onClick={(e) => handleRowHeaderClick(virtualRow.index, e)}
               >
                 {virtualRow.index + 1}
               </div>
@@ -292,6 +395,13 @@ export function CsvTable() {
                 const isSelected = selectedCell?.row === virtualRow.index && selectedCell?.column === virtualColumn.index;
                 const isEditing = editingCell?.row === virtualRow.index && editingCell?.column === virtualColumn.index;
 
+                // Check if cell is in selected range
+                const isInRange = selectedRange &&
+                  virtualRow.index >= selectedRange.startRow &&
+                  virtualRow.index <= selectedRange.endRow &&
+                  virtualColumn.index >= selectedRange.startColumn &&
+                  virtualColumn.index <= selectedRange.endColumn;
+
                 return (
                   <div
                     key={`${virtualRow.index}-${virtualColumn.index}`}
@@ -300,6 +410,7 @@ export function CsvTable() {
                       {
                         'bg-primary/10 border-primary border-2 z-10': isSelected && !isEditing,
                         'bg-accent border-primary border-2 z-20 ring-2 ring-primary/50': isEditing,
+                        'bg-primary/5': isInRange && !isSelected && !isEditing,
                       }
                     )}
                     style={{
@@ -311,7 +422,7 @@ export function CsvTable() {
                       transform: `translate(${virtualColumn.start}px, ${virtualRow.start}px)`,
                       backfaceVisibility: 'hidden',
                     }}
-                    onClick={() => handleCellClick(virtualRow.index, virtualColumn.index)}
+                    onClick={(e) => handleCellClick(virtualRow.index, virtualColumn.index, e)}
                     onDoubleClick={() => handleCellDoubleClick(virtualRow.index, virtualColumn.index)}
                   >
                     {isEditing ? (

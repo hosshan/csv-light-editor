@@ -32,6 +32,10 @@ interface CsvState {
 
   selectCell: (cell: CsvCell | null) => void;
   selectRange: (range: CsvSelection | null) => void;
+  selectRow: (rowIndex: number) => void;
+  selectColumn: (columnIndex: number) => void;
+  selectAll: () => void;
+  extendSelection: (cell: CsvCell) => void;
 
   setViewportRange: (range: ViewportRange) => void;
 
@@ -88,6 +92,82 @@ export const useCsvStore = create<CsvState>()(
 
       selectCell: (selectedCell) => set({ selectedCell, selectedRange: null }),
       selectRange: (selectedRange) => set({ selectedRange, selectedCell: null }),
+
+      selectRow: (rowIndex) => {
+        const state = get();
+        if (!state.data) return;
+
+        const selection: CsvSelection = {
+          startRow: rowIndex,
+          startColumn: 0,
+          endRow: rowIndex,
+          endColumn: state.data.headers.length - 1,
+          type: 'row'
+        };
+
+        set({ selectedRange: selection, selectedCell: null });
+      },
+
+      selectColumn: (columnIndex) => {
+        const state = get();
+        if (!state.data) return;
+
+        const selection: CsvSelection = {
+          startRow: 0,
+          startColumn: columnIndex,
+          endRow: state.data.rows.length - 1,
+          endColumn: columnIndex,
+          type: 'column'
+        };
+
+        set({ selectedRange: selection, selectedCell: null });
+      },
+
+      selectAll: () => {
+        const state = get();
+        if (!state.data) return;
+
+        const selection: CsvSelection = {
+          startRow: 0,
+          startColumn: 0,
+          endRow: state.data.rows.length - 1,
+          endColumn: state.data.headers.length - 1,
+          type: 'range'
+        };
+
+        set({ selectedRange: selection, selectedCell: null });
+      },
+
+      extendSelection: (cell) => {
+        const state = get();
+
+        // If there's already a selection, extend it
+        if (state.selectedRange) {
+          const newSelection: CsvSelection = {
+            startRow: Math.min(state.selectedRange.startRow, cell.row),
+            startColumn: Math.min(state.selectedRange.startColumn, cell.column),
+            endRow: Math.max(state.selectedRange.endRow, cell.row),
+            endColumn: Math.max(state.selectedRange.endColumn, cell.column),
+            type: 'range'
+          };
+          set({ selectedRange: newSelection, selectedCell: null });
+        }
+        // If there's a selected cell, create a range from that cell to the new cell
+        else if (state.selectedCell) {
+          const newSelection: CsvSelection = {
+            startRow: Math.min(state.selectedCell.row, cell.row),
+            startColumn: Math.min(state.selectedCell.column, cell.column),
+            endRow: Math.max(state.selectedCell.row, cell.row),
+            endColumn: Math.max(state.selectedCell.column, cell.column),
+            type: 'range'
+          };
+          set({ selectedRange: newSelection, selectedCell: null });
+        }
+        // Otherwise, just select the cell
+        else {
+          set({ selectedCell: cell, selectedRange: null });
+        }
+      },
 
       setViewportRange: (viewportRange) => set({ viewportRange }),
 
