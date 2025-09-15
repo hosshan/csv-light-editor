@@ -349,7 +349,7 @@ pub struct ColumnTypeInfo {
 
 #[tauri::command]
 pub async fn detect_column_types(
-    data: &CsvData,
+    data: CsvData,
 ) -> Result<Vec<ColumnTypeInfo>, AppError> {
     let detector = DataTypeDetector::new();
     let mut column_types = Vec::new();
@@ -397,7 +397,7 @@ pub struct ValidationError {
 
 #[tauri::command]
 pub async fn validate_data_types(
-    data: &CsvData,
+    data: CsvData,
     column_types: Vec<(usize, DataType)>,
 ) -> Result<ValidationResult, AppError> {
     let detector = DataTypeDetector::new();
@@ -448,7 +448,7 @@ pub struct SearchResult {
 
 #[tauri::command]
 pub async fn find_in_csv(
-    data: &CsvData,
+    data: CsvData,
     options: FindOptions,
 ) -> Result<Vec<SearchResult>, AppError> {
     let mut results = Vec::new();
