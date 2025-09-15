@@ -3,11 +3,13 @@ use std::fs;
 use tauri::State;
 use crate::csv_engine::{reader::CsvReader, writer::CsvWriter};
 use crate::csv_engine::reader::CsvData;
+use crate::csv_engine::data_types::{DataType, DataTypeDetector};
 use crate::metadata::CsvMetadata;
 use crate::state::AppState;
 use crate::utils::AppError;
 use encoding_rs::{UTF_8, SHIFT_JIS, EUC_JP};
 use chrono::Local;
+use serde::{Deserialize, Serialize};
 
 #[tauri::command]
 pub async fn open_csv_file(
@@ -204,4 +206,429 @@ pub async fn validate_csv_file(path: String) -> Result<bool, AppError> {
         Ok(_) => Ok(true),
         Err(_) => Ok(false),
     }
+}
+
+#[tauri::command]
+pub async fn add_column(
+    mut data: CsvData,
+    column_name: String,
+    position: Option<usize>,
+) -> Result<CsvData, AppError> {
+    // Add to headers
+    let position = position.unwrap_or(data.headers.len());
+    if position > data.headers.len() {
+        return Err(AppError::new(
+            "Invalid column position".to_string(),
+            "INVALID_POSITION",
+        ));
+    }
+    data.headers.insert(position, column_name);
+
+    // Add empty values to all rows
+    for row in &mut data.rows {
+        row.insert(position, String::new());
+    }
+
+    // Update metadata
+    data.metadata.column_count = data.headers.len();
+
+    Ok(data)
+}
+
+#[tauri::command]
+pub async fn delete_column(
+    mut data: CsvData,
+    column_index: usize,
+) -> Result<CsvData, AppError> {
+    if column_index >= data.headers.len() {
+        return Err(AppError::new(
+            "Invalid column index".to_string(),
+            "INVALID_INDEX",
+        ));
+    }
+
+    // Remove from headers
+    data.headers.remove(column_index);
+
+    // Remove from all rows
+    for row in &mut data.rows {
+        if column_index < row.len() {
+            row.remove(column_index);
+        }
+    }
+
+    // Update metadata
+    data.metadata.column_count = data.headers.len();
+
+    Ok(data)
+}
+
+#[tauri::command]
+pub async fn rename_column(
+    mut data: CsvData,
+    column_index: usize,
+    new_name: String,
+) -> Result<CsvData, AppError> {
+    if column_index >= data.headers.len() {
+        return Err(AppError::new(
+            "Invalid column index".to_string(),
+            "INVALID_INDEX",
+        ));
+    }
+
+    data.headers[column_index] = new_name;
+
+    Ok(data)
+}
+
+#[tauri::command]
+pub async fn add_row(
+    mut data: CsvData,
+    row_index: Option<usize>,
+) -> Result<CsvData, AppError> {
+    let new_row = vec![String::new(); data.headers.len()];
+    let position = row_index.unwrap_or(data.rows.len());
+
+    if position > data.rows.len() {
+        return Err(AppError::new(
+            "Invalid row position".to_string(),
+            "INVALID_POSITION",
+        ));
+    }
+
+    data.rows.insert(position, new_row);
+    data.metadata.row_count = data.rows.len();
+
+    Ok(data)
+}
+
+#[tauri::command]
+pub async fn delete_row(
+    mut data: CsvData,
+    row_index: usize,
+) -> Result<CsvData, AppError> {
+    if row_index >= data.rows.len() {
+        return Err(AppError::new(
+            "Invalid row index".to_string(),
+            "INVALID_INDEX",
+        ));
+    }
+
+    data.rows.remove(row_index);
+    data.metadata.row_count = data.rows.len();
+
+    Ok(data)
+}
+
+#[tauri::command]
+pub async fn duplicate_row(
+    mut data: CsvData,
+    row_index: usize,
+) -> Result<CsvData, AppError> {
+    if row_index >= data.rows.len() {
+        return Err(AppError::new(
+            "Invalid row index".to_string(),
+            "INVALID_INDEX",
+        ));
+    }
+
+    let row_to_duplicate = data.rows[row_index].clone();
+    data.rows.insert(row_index + 1, row_to_duplicate);
+    data.metadata.row_count = data.rows.len();
+
+    Ok(data)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ColumnTypeInfo {
+    pub column_index: usize,
+    pub column_name: String,
+    pub detected_type: DataType,
+    pub sample_values: Vec<String>,
+}
+
+#[tauri::command]
+pub async fn detect_column_types(
+    data: &CsvData,
+) -> Result<Vec<ColumnTypeInfo>, AppError> {
+    let detector = DataTypeDetector::new();
+    let mut column_types = Vec::new();
+
+    for (index, header) in data.headers.iter().enumerate() {
+        let column_values: Vec<String> = data.rows
+            .iter()
+            .take(100) // Sample first 100 rows for type detection
+            .filter_map(|row| row.get(index))
+            .cloned()
+            .collect();
+
+        let detected_type = detector.detect_column_type(&column_values);
+
+        let sample_values = column_values
+            .into_iter()
+            .take(5)
+            .collect();
+
+        column_types.push(ColumnTypeInfo {
+            column_index: index,
+            column_name: header.clone(),
+            detected_type,
+            sample_values,
+        });
+    }
+
+    Ok(column_types)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ValidationResult {
+    pub is_valid: bool,
+    pub errors: Vec<ValidationError>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ValidationError {
+    pub row_index: usize,
+    pub column_index: usize,
+    pub value: String,
+    pub expected_type: DataType,
+    pub message: String,
+}
+
+#[tauri::command]
+pub async fn validate_data_types(
+    data: &CsvData,
+    column_types: Vec<(usize, DataType)>,
+) -> Result<ValidationResult, AppError> {
+    let detector = DataTypeDetector::new();
+    let mut errors = Vec::new();
+
+    for (row_index, row) in data.rows.iter().enumerate() {
+        for (column_index, expected_type) in &column_types {
+            if let Some(value) = row.get(*column_index) {
+                if !value.is_empty() && !detector.validate_value(value, expected_type) {
+                    errors.push(ValidationError {
+                        row_index,
+                        column_index: *column_index,
+                        value: value.clone(),
+                        expected_type: expected_type.clone(),
+                        message: format!(
+                            "Value '{}' is not a valid {}",
+                            value,
+                            format!("{:?}", expected_type).to_lowercase()
+                        ),
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(ValidationResult {
+        is_valid: errors.is_empty(),
+        errors,
+    })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FindOptions {
+    pub search_text: String,
+    pub case_sensitive: bool,
+    pub whole_word: bool,
+    pub regex: bool,
+    pub column_index: Option<usize>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub row_index: usize,
+    pub column_index: usize,
+    pub value: String,
+    pub context: String,
+}
+
+#[tauri::command]
+pub async fn find_in_csv(
+    data: &CsvData,
+    options: FindOptions,
+) -> Result<Vec<SearchResult>, AppError> {
+    let mut results = Vec::new();
+
+    let search_regex = if options.regex {
+        match regex::Regex::new(&options.search_text) {
+            Ok(re) => Some(re),
+            Err(e) => return Err(AppError::new(
+                format!("Invalid regex pattern: {}", e),
+                "INVALID_REGEX",
+            )),
+        }
+    } else {
+        None
+    };
+
+    for (row_index, row) in data.rows.iter().enumerate() {
+        let columns_to_search = if let Some(col_idx) = options.column_index {
+            vec![col_idx]
+        } else {
+            (0..row.len()).collect()
+        };
+
+        for column_index in columns_to_search {
+            if let Some(value) = row.get(column_index) {
+                let matches = if let Some(ref regex) = search_regex {
+                    regex.is_match(value)
+                } else if options.whole_word {
+                    let search = if options.case_sensitive {
+                        &options.search_text
+                    } else {
+                        &options.search_text.to_lowercase()
+                    };
+                    let val = if options.case_sensitive {
+                        value.clone()
+                    } else {
+                        value.to_lowercase()
+                    };
+                    val.split_whitespace().any(|word| word == search)
+                } else if options.case_sensitive {
+                    value.contains(&options.search_text)
+                } else {
+                    value.to_lowercase().contains(&options.search_text.to_lowercase())
+                };
+
+                if matches {
+                    let context = if value.len() > 100 {
+                        format!("{}...", &value[..100])
+                    } else {
+                        value.clone()
+                    };
+
+                    results.push(SearchResult {
+                        row_index,
+                        column_index,
+                        value: value.clone(),
+                        context,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(results)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReplaceOptions {
+    pub find_options: FindOptions,
+    pub replace_text: String,
+    pub preview_only: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReplaceResult {
+    pub replaced_count: usize,
+    pub data: Option<CsvData>,
+    pub preview: Vec<ReplacePreview>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReplacePreview {
+    pub row_index: usize,
+    pub column_index: usize,
+    pub original_value: String,
+    pub new_value: String,
+}
+
+#[tauri::command]
+pub async fn replace_in_csv(
+    mut data: CsvData,
+    options: ReplaceOptions,
+) -> Result<ReplaceResult, AppError> {
+    let mut preview = Vec::new();
+    let mut replaced_count = 0;
+
+    let search_regex = if options.find_options.regex {
+        match regex::Regex::new(&options.find_options.search_text) {
+            Ok(re) => Some(re),
+            Err(e) => return Err(AppError::new(
+                format!("Invalid regex pattern: {}", e),
+                "INVALID_REGEX",
+            )),
+        }
+    } else {
+        None
+    };
+
+    for (row_index, row) in data.rows.iter_mut().enumerate() {
+        let columns_to_search = if let Some(col_idx) = options.find_options.column_index {
+            vec![col_idx]
+        } else {
+            (0..row.len()).collect()
+        };
+
+        for column_index in columns_to_search {
+            if let Some(value) = row.get_mut(column_index) {
+                let original_value = value.clone();
+                let mut new_value = original_value.clone();
+                let mut was_replaced = false;
+
+                if let Some(ref regex) = search_regex {
+                    if regex.is_match(&original_value) {
+                        new_value = regex.replace_all(&original_value, &options.replace_text).to_string();
+                        was_replaced = true;
+                    }
+                } else if options.find_options.whole_word {
+                    let words: Vec<String> = original_value.split_whitespace()
+                        .map(|word| {
+                            if options.find_options.case_sensitive {
+                                if word == options.find_options.search_text {
+                                    options.replace_text.clone()
+                                } else {
+                                    word.to_string()
+                                }
+                            } else {
+                                if word.to_lowercase() == options.find_options.search_text.to_lowercase() {
+                                    options.replace_text.clone()
+                                } else {
+                                    word.to_string()
+                                }
+                            }
+                        })
+                        .collect();
+                    new_value = words.join(" ");
+                    was_replaced = new_value != original_value;
+                } else if options.find_options.case_sensitive {
+                    new_value = original_value.replace(&options.find_options.search_text, &options.replace_text);
+                    was_replaced = new_value != original_value;
+                } else {
+                    // Case-insensitive replace (more complex)
+                    let lower_original = original_value.to_lowercase();
+                    let lower_search = options.find_options.search_text.to_lowercase();
+                    if lower_original.contains(&lower_search) {
+                        // Simple implementation for case-insensitive replace
+                        new_value = original_value.replace(&options.find_options.search_text, &options.replace_text);
+                        was_replaced = true;
+                    }
+                }
+
+                if was_replaced {
+                    replaced_count += 1;
+                    preview.push(ReplacePreview {
+                        row_index,
+                        column_index,
+                        original_value: original_value.clone(),
+                        new_value: new_value.clone(),
+                    });
+
+                    if !options.preview_only {
+                        *value = new_value;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(ReplaceResult {
+        replaced_count,
+        data: if options.preview_only { None } else { Some(data) },
+        preview,
+    })
 }
