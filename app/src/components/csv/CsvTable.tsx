@@ -16,6 +16,7 @@ export function CsvTable() {
   } = useCsvStore();
 
   const [editValue, setEditValue] = useState('');
+  const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
 
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -45,6 +46,37 @@ export function CsvTable() {
         ? element => element?.getBoundingClientRect().width
         : undefined,
   });
+
+  // ResizeObserver for dynamic size calculation
+  useEffect(() => {
+    if (!parentRef.current) return;
+
+    const element = parentRef.current;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setContainerSize(prev => {
+            // Only update if size actually changed to prevent infinite loops
+            if (prev.width !== width || prev.height !== height) {
+              return { width, height };
+            }
+            return prev;
+          });
+        }
+      }
+    });
+
+    // Initial size calculation
+    const rect = element.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      setContainerSize({ width: rect.width, height: rect.height });
+    }
+
+    resizeObserver.observe(element);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   useEffect(() => {
     if (editingCell && data) {
@@ -171,6 +203,7 @@ export function CsvTable() {
     }
   };
 
+
   if (!data) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
@@ -182,8 +215,35 @@ export function CsvTable() {
     );
   }
 
+  // Safety check for data structure
+  if (!data.rows || !data.headers || !Array.isArray(data.rows) || !Array.isArray(data.headers)) {
+    console.error('Invalid CSV data structure:', data);
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <div className="text-center text-destructive">
+          <div className="text-lg mb-2">Invalid CSV data</div>
+          <div className="text-sm">Please try loading the file again</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Debug logging
+  useEffect(() => {
+    console.log('CsvTable Debug:', {
+      dataLength: data?.rows.length || 0,
+      headersLength: data?.headers.length || 0,
+      containerSize,
+      hasData: !!data
+    });
+  }, [data, containerSize]);
+
   return (
-    <div className="flex-1 flex flex-col bg-background relative">
+    <div
+      ref={parentRef}
+      className="flex-1 flex flex-col bg-background relative"
+      style={{ minHeight: '400px' }} // Ensure minimum height
+    >
       {/* Column Headers */}
       <div className="sticky top-0 z-10 bg-muted border-b border-border">
         <div className="flex">
@@ -236,8 +296,8 @@ export function CsvTable() {
           styles.scrollContainer
         )}
         style={{
-          height: 'calc(100vh - 160px)', // Adjusted for better viewport usage
-          maxHeight: 'calc(100vh - 160px)',
+          height: `${Math.max(containerSize.height - 80, 300)}px`, // Ensure minimum height
+          maxHeight: `${Math.max(containerSize.height - 80, 300)}px`,
           contain: 'strict', // Performance optimization
           willChange: 'scroll-position', // Hint for browser optimization
         }}
@@ -247,7 +307,7 @@ export function CsvTable() {
         <div
           style={{
             height: rowVirtualizer.getTotalSize(),
-            width: Math.max(columnVirtualizer.getTotalSize() + 48, parentRef.current?.clientWidth || 0), // Ensure minimum width
+            width: Math.max(columnVirtualizer.getTotalSize() + 48, containerSize.width), // Use dynamic width
             position: 'relative',
             minWidth: '100%',
           }}
@@ -276,7 +336,7 @@ export function CsvTable() {
 
                 return (
                   <div
-                    key={`${virtualRow.index}-${virtualColumn.index}`} // More specific key for better performance
+                    key={`${virtualRow.index}-${virtualColumn.index}`}
                     className={cn(
                       'border-r border-b border-border bg-background flex items-center px-2 text-sm cursor-cell transition-colors hover:bg-accent',
                       {
@@ -287,11 +347,11 @@ export function CsvTable() {
                     style={{
                       position: 'absolute',
                       top: 0,
-                      left: 48, // offset for row number column
+                      left: 48,
                       width: virtualColumn.size,
                       height: virtualRow.size,
                       transform: `translate(${virtualColumn.start}px, ${virtualRow.start}px)`,
-                      backfaceVisibility: 'hidden', // Performance optimization
+                      backfaceVisibility: 'hidden',
                     }}
                     onClick={() => handleCellClick(virtualRow.index, virtualColumn.index)}
                     onDoubleClick={() => handleCellDoubleClick(virtualRow.index, virtualColumn.index)}
@@ -305,7 +365,6 @@ export function CsvTable() {
                         onBlur={() => {
                           if (editingCell) {
                             updateCell(editingCell, editValue);
-                            // Return focus to table for arrow key navigation
                             setTimeout(() => {
                               parentRef.current?.focus();
                             }, 0);
@@ -319,7 +378,7 @@ export function CsvTable() {
                     ) : (
                       <span
                         className="truncate w-full block"
-                        title={cellValue.length > 20 ? cellValue : undefined} // Only show tooltip for long values
+                        title={cellValue.length > 20 ? cellValue : undefined}
                       >
                         {cellValue}
                       </span>

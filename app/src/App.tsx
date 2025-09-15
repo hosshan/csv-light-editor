@@ -118,7 +118,17 @@ function App() {
             </div>
           )}
 
-          <CsvTable />
+          {/* Wrap CsvTable in error boundary */}
+          {data ? (
+            <CsvTable />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <div className="text-lg mb-2">No CSV file loaded</div>
+                <div className="text-sm">Click "Open" to load a CSV file</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

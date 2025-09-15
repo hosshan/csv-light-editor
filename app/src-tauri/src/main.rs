@@ -17,13 +17,13 @@ fn main() {
     tauri::Builder::default()
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![
-            commands::open_csv_file,
-            commands::save_csv_file,
-            commands::save_csv_file_as,
-            commands::get_current_file,
-            commands::get_csv_chunk,
-            commands::get_csv_metadata,
-            commands::validate_csv_file,
+            commands::csv::open_csv_file,
+            commands::csv::save_csv_file,
+            commands::csv::save_csv_file_as,
+            commands::csv::get_current_file,
+            commands::csv::get_csv_chunk,
+            commands::csv::get_csv_metadata,
+            commands::csv::validate_csv_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
