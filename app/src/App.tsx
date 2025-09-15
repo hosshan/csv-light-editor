@@ -101,7 +101,7 @@ function App() {
         <Sidebar />
 
         {/* CSV Table */}
-        <div className="flex-1 relative bg-background">
+        <div className="flex-1 bg-background flex flex-col overflow-hidden">
           {isLoading && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
               <div className="flex items-center gap-2 text-foreground">
@@ -118,7 +118,17 @@ function App() {
             </div>
           )}
 
-          <CsvTable />
+          {/* Wrap CsvTable in error boundary */}
+          {data ? (
+            <CsvTable />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <div className="text-lg mb-2">No CSV file loaded</div>
+                <div className="text-sm">Click "Open" to load a CSV file</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
