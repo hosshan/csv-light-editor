@@ -104,14 +104,15 @@ export function CsvTable() {
     // If no cell is selected and no range is selected, don't handle navigation
     if (!selectedCell && !selectedRange) return;
 
-    // Use current selection or start of range for navigation
+    // Use current selection or focus point of range for navigation
     let row: number, column: number;
     if (selectedCell) {
       row = selectedCell.row;
       column = selectedCell.column;
     } else if (selectedRange) {
-      row = selectedRange.startRow;
-      column = selectedRange.startColumn;
+      // Use focus point (current active end) if available, otherwise use start point
+      row = selectedRange.focusRow ?? selectedRange.endRow;
+      column = selectedRange.focusColumn ?? selectedRange.endColumn;
     } else {
       return; // Should not reach here due to check above
     }
@@ -428,6 +429,11 @@ export function CsvTable() {
                   virtualColumn.index >= selectedRange.startColumn &&
                   virtualColumn.index <= selectedRange.endColumn;
 
+                // Check if this is the focus cell (active end of selection)
+                const isFocusCell = selectedRange &&
+                  selectedRange.focusRow === virtualRow.index &&
+                  selectedRange.focusColumn === virtualColumn.index;
+
                 return (
                   <div
                     key={`${virtualRow.index}-${virtualColumn.index}`}
@@ -436,7 +442,8 @@ export function CsvTable() {
                       {
                         'bg-primary/10 border-primary border-2 z-10': isSelected && !isEditing,
                         'bg-accent border-primary border-2 z-20 ring-2 ring-primary/50': isEditing,
-                        'bg-primary/5': isInRange && !isSelected && !isEditing,
+                        'bg-primary/5': isInRange && !isSelected && !isEditing && !isFocusCell,
+                        'bg-primary/15 border-primary/50 border-2 z-15': isFocusCell && !isEditing,
                       }
                     )}
                     style={{

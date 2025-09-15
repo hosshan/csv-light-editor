@@ -102,7 +102,11 @@ export const useCsvStore = create<CsvState>()(
           startColumn: 0,
           endRow: rowIndex,
           endColumn: state.data.headers.length - 1,
-          type: 'row'
+          type: 'row',
+          anchorRow: rowIndex,
+          anchorColumn: 0,
+          focusRow: rowIndex,
+          focusColumn: state.data.headers.length - 1
         };
 
         set({ selectedRange: selection, selectedCell: null });
@@ -117,7 +121,11 @@ export const useCsvStore = create<CsvState>()(
           startColumn: columnIndex,
           endRow: state.data.rows.length - 1,
           endColumn: columnIndex,
-          type: 'column'
+          type: 'column',
+          anchorRow: 0,
+          anchorColumn: columnIndex,
+          focusRow: state.data.rows.length - 1,
+          focusColumn: columnIndex
         };
         set({ selectedRange: selection, selectedCell: null });
       },
@@ -131,7 +139,11 @@ export const useCsvStore = create<CsvState>()(
           startColumn: 0,
           endRow: state.data.rows.length - 1,
           endColumn: state.data.headers.length - 1,
-          type: 'range'
+          type: 'range',
+          anchorRow: 0,
+          anchorColumn: 0,
+          focusRow: state.data.rows.length - 1,
+          focusColumn: state.data.headers.length - 1
         };
 
         set({ selectedRange: selection, selectedCell: null });
@@ -149,7 +161,9 @@ export const useCsvStore = create<CsvState>()(
             endColumn: Math.max(state.selectedCell.column, cell.column),
             type: 'range',
             anchorRow: state.selectedCell.row,
-            anchorColumn: state.selectedCell.column
+            anchorColumn: state.selectedCell.column,
+            focusRow: cell.row,
+            focusColumn: cell.column
           };
           set({ selectedRange: newSelection, selectedCell: null });
         }
@@ -165,7 +179,9 @@ export const useCsvStore = create<CsvState>()(
             endColumn: Math.max(anchorColumn, cell.column),
             type: 'range',
             anchorRow,
-            anchorColumn
+            anchorColumn,
+            focusRow: cell.row,
+            focusColumn: cell.column
           };
           set({ selectedRange: newSelection, selectedCell: null });
         }
