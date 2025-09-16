@@ -140,9 +140,8 @@ export const ImportExportSettings: React.FC<ImportExportSettingsProps> = ({
               </TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-y-auto mt-4">
-
-            <TabsContent value="export" className="space-y-4 p-1">
+            <TabsContent value="export" className="flex-1 overflow-y-auto mt-4">
+              <div className="space-y-4 p-1">
             {/* File Format Section */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">File Format</h3>
@@ -299,9 +298,11 @@ export const ImportExportSettings: React.FC<ImportExportSettingsProps> = ({
                 Reset to Defaults
               </Button>
             </div>
-          </TabsContent>
+              </div>
+            </TabsContent>
 
-            <TabsContent value="import" className="space-y-4 p-1">
+            <TabsContent value="import" className="flex-1 overflow-y-auto mt-4">
+              <div className="space-y-4 p-1">
             {/* File Detection Section */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">File Detection</h3>
@@ -438,8 +439,8 @@ export const ImportExportSettings: React.FC<ImportExportSettingsProps> = ({
                 Reset to Defaults
               </Button>
             </div>
-          </TabsContent>
-            </div>
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
 
