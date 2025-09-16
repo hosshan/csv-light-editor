@@ -148,8 +148,8 @@
 - [x] カット機能（Cmd+X）
 - [x] 全選択（Cmd+A）
 - [x] 削除機能（Delete/Backspace）- 単一セル・範囲選択対応
-- [ ] Undo機能（Cmd+Z）
-- [ ] Redo機能（Cmd+Shift+Z）
+- [x] Undo機能（Cmd+Z）- セル編集・削除・ペースト操作対応
+- [x] Redo機能（Cmd+Shift+Z）- 履歴を進む操作
 - [x] クリップボード形式の管理（2D配列形式）
 
 #### タスク2.8: カラム操作機能（Phase 2: バックエンドAPI実装済み）
