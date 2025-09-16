@@ -23,6 +23,8 @@ chardet = "0.2"
 log = "0.4"
 env_logger = "0.10"
 chrono = "0.4"
+regex = "1.10"
+dirs = "5.0"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

@@ -27,6 +27,11 @@ export interface CsvSelection {
   startColumn: number;
   endRow: number;
   endColumn: number;
+  type: 'cell' | 'row' | 'column' | 'range';
+  anchorRow?: number;
+  anchorColumn?: number;
+  focusRow?: number;
+  focusColumn?: number;
 }
 
 export interface ViewportRange {
@@ -45,4 +50,14 @@ export interface FilterConfig {
 export interface SortConfig {
   column: number;
   direction: 'asc' | 'desc';
+}
+
+export interface HistoryAction {
+  type: 'cell_update' | 'range_update' | 'paste' | 'delete' | 'cut';
+  data: {
+    beforeData: CsvData;
+    afterData: CsvData;
+    selection?: CsvCell | CsvSelection;
+  };
+  timestamp: number;
 }
