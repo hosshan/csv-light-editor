@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   FolderOpen,
   Save,
@@ -8,11 +8,18 @@ import {
   Filter,
   Search,
   Settings,
-  FileText
+  FileText,
+  Shield,
+  Replace,
+  FileInput,
+  Database
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useCsvStore } from '../../store/csvStore';
 import { useTauri } from '../../hooks/useTauri';
+import { DataTypeDetection } from '../DataTypeDetection';
+import { SearchReplace } from '../SearchReplace';
+import { ImportExportSettings } from '../ImportExportSettings';
 
 interface ToolbarProps {
   onSave?: () => void;
@@ -27,9 +34,18 @@ export function Toolbar({ onSave, onSaveAs }: ToolbarProps = {}) {
     setLoading,
     setData,
     setCurrentFilePath,
-    setError
+    setError,
+    undo,
+    redo,
+    canUndo,
+    canRedo
   } = useCsvStore();
   const tauri = useTauri();
+
+  // Dialog states
+  const [isDataTypeDialogOpen, setIsDataTypeDialogOpen] = useState(false);
+  const [isSearchReplaceDialogOpen, setIsSearchReplaceDialogOpen] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
 
   const handleOpenFile = async () => {
     try {
@@ -105,8 +121,10 @@ export function Toolbar({ onSave, onSaveAs }: ToolbarProps = {}) {
           <Button
             variant="ghost"
             size="sm"
-            disabled={true} // TODO: Implement undo/redo
+            disabled={!canUndo}
+            onClick={undo}
             className="flex items-center space-x-1"
+            title="Undo (⌘Z)"
           >
             <Undo className="h-4 w-4" />
           </Button>
@@ -114,33 +132,39 @@ export function Toolbar({ onSave, onSaveAs }: ToolbarProps = {}) {
           <Button
             variant="ghost"
             size="sm"
-            disabled={true} // TODO: Implement undo/redo
+            disabled={!canRedo}
+            onClick={redo}
             className="flex items-center space-x-1"
+            title="Redo (⌘⇧Z)"
           >
             <Redo className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* View Operations */}
-        <div className="flex items-center space-x-1">
+        {/* Data Operations */}
+        <div className="flex items-center space-x-1 border-r border-border pr-2">
           <Button
             variant="ghost"
             size="sm"
             disabled={!data}
+            onClick={() => setIsSearchReplaceDialogOpen(true)}
             className="flex items-center space-x-1"
+            title="Find & Replace (⌘F)"
           >
-            <Filter className="h-4 w-4" />
-            <span>Filter</span>
+            <Search className="h-4 w-4" />
+            <span>Find</span>
           </Button>
 
           <Button
             variant="ghost"
             size="sm"
             disabled={!data}
+            onClick={() => setIsDataTypeDialogOpen(true)}
             className="flex items-center space-x-1"
+            title="Data Type Detection"
           >
-            <Search className="h-4 w-4" />
-            <span>Search</span>
+            <Shield className="h-4 w-4" />
+            <span>Validate</span>
           </Button>
         </div>
       </div>
@@ -162,11 +186,34 @@ export function Toolbar({ onSave, onSaveAs }: ToolbarProps = {}) {
         <Button
           variant="ghost"
           size="sm"
+          onClick={() => setIsSettingsDialogOpen(true)}
           className="flex items-center space-x-1"
+          title="Import/Export Settings"
         >
           <Settings className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Dialogs */}
+      {data && (
+        <>
+          <DataTypeDetection
+            isOpen={isDataTypeDialogOpen}
+            onClose={() => setIsDataTypeDialogOpen(false)}
+            csvData={data}
+          />
+          <SearchReplace
+            isOpen={isSearchReplaceDialogOpen}
+            onClose={() => setIsSearchReplaceDialogOpen(false)}
+            csvData={data}
+            onDataChange={(newData) => setData(newData)}
+          />
+        </>
+      )}
+      <ImportExportSettings
+        isOpen={isSettingsDialogOpen}
+        onClose={() => setIsSettingsDialogOpen(false)}
+      />
     </div>
   );
 }
