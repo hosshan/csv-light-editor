@@ -140,8 +140,8 @@ export const ImportExportSettings: React.FC<ImportExportSettingsProps> = ({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="export" className="flex-1 overflow-y-auto mt-4">
-              <div className="space-y-4 p-1">
+            <TabsContent value="export" className="flex-1 overflow-y-auto mt-2 min-h-0">
+              <div className="space-y-4 p-4 pb-8">
             {/* File Format Section */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">File Format</h3>
@@ -301,8 +301,8 @@ export const ImportExportSettings: React.FC<ImportExportSettingsProps> = ({
               </div>
             </TabsContent>
 
-            <TabsContent value="import" className="flex-1 overflow-y-auto mt-4">
-              <div className="space-y-4 p-1">
+            <TabsContent value="import" className="flex-1 overflow-y-auto mt-2 min-h-0">
+              <div className="space-y-4 p-4 pb-8">
             {/* File Detection Section */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">File Detection</h3>
