@@ -20,6 +20,9 @@ interface CsvState {
   editingCell: CsvCell | null;
   hasUnsavedChanges: boolean;
 
+  // Clipboard state
+  clipboard: string[][] | null;
+
   // Filter and sort state
   filters: FilterConfig[];
   sorts: SortConfig[];
@@ -51,6 +54,12 @@ interface CsvState {
   removeSort: (index: number) => void;
   clearSorts: () => void;
 
+  // Clipboard actions
+  copySelection: () => void;
+  cutSelection: () => void;
+  paste: (targetCell?: CsvCell) => void;
+  deleteSelection: () => void;
+
   markSaved: () => void;
   reset: () => void;
 }
@@ -76,6 +85,8 @@ export const useCsvStore = create<CsvState>()(
 
       editingCell: null,
       hasUnsavedChanges: false,
+
+      clipboard: null,
 
       filters: [],
       sorts: [],
@@ -255,6 +266,110 @@ export const useCsvStore = create<CsvState>()(
 
       clearSorts: () => set({ sorts: [] }),
 
+      // Clipboard operations
+      copySelection: () => {
+        const state = get();
+        if (!state.data) return;
+
+        let cellsToClip: string[][] = [];
+
+        if (state.selectedCell) {
+          // Copy single cell
+          cellsToClip = [[state.selectedCell.value]];
+        } else if (state.selectedRange) {
+          // Copy range selection
+          for (let row = state.selectedRange.startRow; row <= state.selectedRange.endRow; row++) {
+            const rowData: string[] = [];
+            for (let col = state.selectedRange.startColumn; col <= state.selectedRange.endColumn; col++) {
+              rowData.push(state.data.rows[row]?.[col] || '');
+            }
+            cellsToClip.push(rowData);
+          }
+        }
+
+        if (cellsToClip.length > 0) {
+          set({ clipboard: cellsToClip });
+        }
+      },
+
+      cutSelection: () => {
+        const state = get();
+        // First copy the selection
+        state.copySelection();
+        // Then delete it
+        state.deleteSelection();
+      },
+
+      paste: (targetCell) => {
+        const state = get();
+        if (!state.data || !state.clipboard) return;
+
+        const newRows = [...state.data.rows];
+        const target = targetCell || state.selectedCell;
+
+        if (!target) return;
+
+        const startRow = target.row;
+        const startCol = target.column;
+
+        // Paste clipboard data starting from target cell
+        for (let clipRow = 0; clipRow < state.clipboard.length; clipRow++) {
+          const targetRowIndex = startRow + clipRow;
+
+          // Extend rows if necessary
+          while (targetRowIndex >= newRows.length) {
+            newRows.push(new Array(state.data.headers.length).fill(''));
+          }
+
+          for (let clipCol = 0; clipCol < state.clipboard[clipRow].length; clipCol++) {
+            const targetColIndex = startCol + clipCol;
+
+            // Only paste if within bounds
+            if (targetColIndex < state.data.headers.length) {
+              if (!newRows[targetRowIndex]) {
+                newRows[targetRowIndex] = new Array(state.data.headers.length).fill('');
+              }
+              newRows[targetRowIndex][targetColIndex] = state.clipboard[clipRow][clipCol];
+            }
+          }
+        }
+
+        set({
+          data: { ...state.data, rows: newRows },
+          hasUnsavedChanges: true
+        });
+      },
+
+      deleteSelection: () => {
+        const state = get();
+        if (!state.data) return;
+
+        const newRows = [...state.data.rows];
+
+        if (state.selectedCell) {
+          // Delete single cell
+          if (newRows[state.selectedCell.row]) {
+            newRows[state.selectedCell.row] = [...newRows[state.selectedCell.row]];
+            newRows[state.selectedCell.row][state.selectedCell.column] = '';
+          }
+        } else if (state.selectedRange) {
+          // Delete range selection
+          for (let row = state.selectedRange.startRow; row <= state.selectedRange.endRow; row++) {
+            if (newRows[row]) {
+              newRows[row] = [...newRows[row]];
+              for (let col = state.selectedRange.startColumn; col <= state.selectedRange.endColumn; col++) {
+                newRows[row][col] = '';
+              }
+            }
+          }
+        }
+
+        set({
+          data: { ...state.data, rows: newRows },
+          hasUnsavedChanges: true
+        });
+      },
+
       markSaved: () => set({ hasUnsavedChanges: false }),
 
       reset: () => set({
@@ -266,6 +381,7 @@ export const useCsvStore = create<CsvState>()(
         selectedRange: null,
         editingCell: null,
         hasUnsavedChanges: false,
+        clipboard: null,
         filters: [],
         sorts: [],
         viewportRange: {

@@ -17,7 +17,11 @@ export function CsvTable() {
     extendSelection,
     startEditing,
     stopEditing,
-    updateCell
+    updateCell,
+    copySelection,
+    cutSelection,
+    paste,
+    deleteSelection
   } = useCsvStore();
 
   const [editValue, setEditValue] = useState('');
@@ -99,6 +103,24 @@ export function CsvTable() {
       e.preventDefault();
       selectAll();
       return;
+    }
+
+    // Handle clipboard operations
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key) {
+        case 'c':
+          e.preventDefault();
+          copySelection();
+          return;
+        case 'x':
+          e.preventDefault();
+          cutSelection();
+          return;
+        case 'v':
+          e.preventDefault();
+          paste();
+          return;
+      }
     }
 
     // If no cell is selected and no range is selected, don't handle navigation
@@ -193,9 +215,7 @@ export function CsvTable() {
       case 'Delete':
       case 'Backspace':
         e.preventDefault();
-        if (selectedCell) {
-          updateCell(selectedCell, '');
-        }
+        deleteSelection();
         return;
     }
 
