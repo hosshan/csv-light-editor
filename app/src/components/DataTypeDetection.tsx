@@ -124,15 +124,16 @@ export const DataTypeDetection: React.FC<DataTypeDetectionProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Data Type Detection & Validation</DialogTitle>
           <DialogDescription>
             Analyze column data types and validate data consistency
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-4 p-1">
           {/* Action Buttons */}
           <div className="flex gap-2">
             <Button
@@ -174,46 +175,48 @@ export const DataTypeDetection: React.FC<DataTypeDetectionProps> = ({
 
           {/* Column Types Table */}
           {columnTypes.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold mb-2">Detected Column Types</h3>
-              <ScrollArea className="h-64 border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>Column Name</TableHead>
-                      <TableHead>Detected Type</TableHead>
-                      <TableHead>Sample Values</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {columnTypes.map((column) => (
-                      <TableRow key={column.column_index}>
-                        <TableCell>{column.column_index + 1}</TableCell>
-                        <TableCell className="font-medium">
-                          {column.column_name}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getTypeColor(column.detected_type)}>
-                            {column.detected_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {column.sample_values.slice(0, 3).join(', ')}
-                          {column.sample_values.length > 3 && '...'}
-                        </TableCell>
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">Detected Column Types</h3>
+              <div className="border rounded-md max-h-64 overflow-hidden">
+                <ScrollArea className="h-64">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>Column Name</TableHead>
+                        <TableHead>Detected Type</TableHead>
+                        <TableHead>Sample Values</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
+                    </TableHeader>
+                    <TableBody>
+                      {columnTypes.map((column) => (
+                        <TableRow key={column.column_index}>
+                          <TableCell>{column.column_index + 1}</TableCell>
+                          <TableCell className="font-medium">
+                            {column.column_name}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getTypeColor(column.detected_type)}>
+                              {column.detected_type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {column.sample_values.slice(0, 3).join(', ')}
+                            {column.sample_values.length > 3 && '...'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </div>
             </div>
           )}
 
           {/* Validation Results */}
           {validationResult && (
-            <div>
-              <h3 className="text-sm font-semibold mb-2">Validation Results</h3>
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">Validation Results</h3>
               {validationResult.is_valid ? (
                 <Alert>
                   <CheckCircle2 className="h-4 w-4" />
@@ -222,54 +225,57 @@ export const DataTypeDetection: React.FC<DataTypeDetectionProps> = ({
                   </AlertDescription>
                 </Alert>
               ) : (
-                <>
+                <div className="space-y-2">
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       Found {validationResult.errors.length} validation error(s)
                     </AlertDescription>
                   </Alert>
-                  <ScrollArea className="h-48 mt-2 border rounded-md">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Row</TableHead>
-                          <TableHead>Column</TableHead>
-                          <TableHead>Value</TableHead>
-                          <TableHead>Expected Type</TableHead>
-                          <TableHead>Message</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {validationResult.errors.slice(0, 100).map((error, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{error.row_index + 1}</TableCell>
-                            <TableCell>
-                              {columnTypes[error.column_index]?.column_name || error.column_index + 1}
-                            </TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {error.value}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{error.expected_type}</Badge>
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
-                              {error.message}
-                            </TableCell>
+                  <div className="border rounded-md max-h-64 overflow-hidden">
+                    <ScrollArea className="h-64">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Row</TableHead>
+                            <TableHead>Column</TableHead>
+                            <TableHead>Value</TableHead>
+                            <TableHead>Expected Type</TableHead>
+                            <TableHead>Message</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    {validationResult.errors.length > 100 && (
-                      <div className="p-2 text-center text-sm text-muted-foreground">
-                        Showing first 100 errors of {validationResult.errors.length}
-                      </div>
-                    )}
-                  </ScrollArea>
-                </>
+                        </TableHeader>
+                        <TableBody>
+                          {validationResult.errors.slice(0, 100).map((error, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell>{error.row_index + 1}</TableCell>
+                              <TableCell>
+                                {columnTypes[error.column_index]?.column_name || error.column_index + 1}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs">
+                                {error.value}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{error.expected_type}</Badge>
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {error.message}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      {validationResult.errors.length > 100 && (
+                        <div className="p-2 text-center text-sm text-muted-foreground">
+                          Showing first 100 errors of {validationResult.errors.length}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </div>
+                </div>
               )}
             </div>
           )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

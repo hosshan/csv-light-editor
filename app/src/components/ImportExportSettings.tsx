@@ -119,27 +119,30 @@ export const ImportExportSettings: React.FC<ImportExportSettingsProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Import/Export Settings</DialogTitle>
           <DialogDescription>
             Configure default settings for importing and exporting CSV files
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="export" className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="export">
-              <FileDown className="mr-2 h-4 w-4" />
-              Export Settings
-            </TabsTrigger>
-            <TabsTrigger value="import">
-              <FileUp className="mr-2 h-4 w-4" />
-              Import Settings
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex-1 overflow-hidden">
+          <Tabs defaultValue="export" className="h-full flex flex-col">
+            <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+              <TabsTrigger value="export">
+                <FileDown className="mr-2 h-4 w-4" />
+                Export Settings
+              </TabsTrigger>
+              <TabsTrigger value="import">
+                <FileUp className="mr-2 h-4 w-4" />
+                Import Settings
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="export" className="space-y-4 mt-4">
+            <div className="flex-1 overflow-y-auto mt-4">
+
+            <TabsContent value="export" className="space-y-4 p-1">
             {/* File Format Section */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">File Format</h3>
@@ -298,7 +301,7 @@ export const ImportExportSettings: React.FC<ImportExportSettingsProps> = ({
             </div>
           </TabsContent>
 
-          <TabsContent value="import" className="space-y-4 mt-4">
+            <TabsContent value="import" className="space-y-4 p-1">
             {/* File Detection Section */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">File Detection</h3>
@@ -436,9 +439,11 @@ export const ImportExportSettings: React.FC<ImportExportSettingsProps> = ({
               </Button>
             </div>
           </TabsContent>
-        </Tabs>
+            </div>
+          </Tabs>
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
