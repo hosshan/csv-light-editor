@@ -51,3 +51,13 @@ export interface SortConfig {
   column: number;
   direction: 'asc' | 'desc';
 }
+
+export interface HistoryAction {
+  type: 'cell_update' | 'range_update' | 'paste' | 'delete' | 'cut';
+  data: {
+    beforeData: CsvData;
+    afterData: CsvData;
+    selection?: CsvCell | CsvSelection;
+  };
+  timestamp: number;
+}

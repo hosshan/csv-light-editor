@@ -21,7 +21,11 @@ export function CsvTable() {
     copySelection,
     cutSelection,
     paste,
-    deleteSelection
+    deleteSelection,
+    undo,
+    redo,
+    canUndo,
+    canRedo
   } = useCsvStore();
 
   const [editValue, setEditValue] = useState('');
@@ -105,7 +109,7 @@ export function CsvTable() {
       return;
     }
 
-    // Handle clipboard operations
+    // Handle clipboard and history operations
     if (e.ctrlKey || e.metaKey) {
       switch (e.key) {
         case 'c':
@@ -119,6 +123,20 @@ export function CsvTable() {
         case 'v':
           e.preventDefault();
           paste();
+          return;
+        case 'z':
+          e.preventDefault();
+          if (e.shiftKey) {
+            // Cmd+Shift+Z for Redo
+            if (canRedo()) {
+              redo();
+            }
+          } else {
+            // Cmd+Z for Undo
+            if (canUndo()) {
+              undo();
+            }
+          }
           return;
       }
     }

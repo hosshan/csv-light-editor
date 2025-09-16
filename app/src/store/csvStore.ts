@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { CsvData, CsvCell, CsvSelection, ViewportRange, FilterConfig, SortConfig } from '../types/csv';
+import type { CsvData, CsvCell, CsvSelection, ViewportRange, FilterConfig, SortConfig, HistoryAction } from '../types/csv';
 
 interface CsvState {
   // Data state
@@ -26,6 +26,10 @@ interface CsvState {
   // Filter and sort state
   filters: FilterConfig[];
   sorts: SortConfig[];
+
+  // History state for Undo/Redo
+  history: HistoryAction[];
+  historyIndex: number;
 
   // Actions
   setData: (data: CsvData, filePath?: string) => void;
@@ -60,6 +64,13 @@ interface CsvState {
   paste: (targetCell?: CsvCell) => void;
   deleteSelection: () => void;
 
+  // History actions
+  undo: () => void;
+  redo: () => void;
+  addToHistory: (action: HistoryAction) => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+
   markSaved: () => void;
   reset: () => void;
 }
@@ -90,6 +101,9 @@ export const useCsvStore = create<CsvState>()(
 
       filters: [],
       sorts: [],
+
+      history: [],
+      historyIndex: -1,
 
       // Actions
       setData: (data, filePath) => set({
@@ -211,24 +225,43 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data) return;
 
+        // Store before state for history
+        const beforeData = { ...state.data };
+
         const newRows = [...state.data.rows];
         if (newRows[cell.row]) {
           newRows[cell.row] = [...newRows[cell.row]];
           newRows[cell.row][cell.column] = value;
         }
 
+        const afterData = {
+          ...state.data,
+          rows: newRows
+        };
+
+        // Add to history
+        const historyAction: HistoryAction = {
+          type: 'cell_update',
+          data: {
+            beforeData,
+            afterData,
+            selection: cell
+          },
+          timestamp: Date.now()
+        };
+
         // Keep the cell selected after updating so navigation continues to work
         const updatedCell = { ...cell, value };
 
         set({
-          data: {
-            ...state.data,
-            rows: newRows
-          },
+          data: afterData,
           hasUnsavedChanges: true,
           editingCell: null,
           selectedCell: updatedCell
         });
+
+        // Add to history after state update
+        get().addToHistory(historyAction);
       },
 
       addFilter: (filter) => {
@@ -304,6 +337,9 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data || !state.clipboard) return;
 
+        // Store before state for history
+        const beforeData = { ...state.data };
+
         const newRows = [...state.data.rows];
         const target = targetCell || state.selectedCell;
 
@@ -334,17 +370,37 @@ export const useCsvStore = create<CsvState>()(
           }
         }
 
+        const afterData = { ...state.data, rows: newRows };
+
+        // Add to history
+        const historyAction: HistoryAction = {
+          type: 'paste',
+          data: {
+            beforeData,
+            afterData,
+            selection: target
+          },
+          timestamp: Date.now()
+        };
+
         set({
-          data: { ...state.data, rows: newRows },
+          data: afterData,
           hasUnsavedChanges: true
         });
+
+        // Add to history after state update
+        get().addToHistory(historyAction);
       },
 
       deleteSelection: () => {
         const state = get();
         if (!state.data) return;
 
+        // Store before state for history
+        const beforeData = { ...state.data };
+
         const newRows = [...state.data.rows];
+        const selection = state.selectedCell || state.selectedRange || undefined;
 
         if (state.selectedCell) {
           // Delete single cell
@@ -364,10 +420,88 @@ export const useCsvStore = create<CsvState>()(
           }
         }
 
+        const afterData = { ...state.data, rows: newRows };
+
+        // Add to history
+        const historyAction: HistoryAction = {
+          type: 'delete',
+          data: {
+            beforeData,
+            afterData,
+            selection
+          },
+          timestamp: Date.now()
+        };
+
         set({
-          data: { ...state.data, rows: newRows },
+          data: afterData,
           hasUnsavedChanges: true
         });
+
+        // Add to history after state update
+        get().addToHistory(historyAction);
+      },
+
+      // History operations
+      addToHistory: (action) => {
+        const state = get();
+        const newHistory = state.history.slice(0, state.historyIndex + 1);
+        newHistory.push(action);
+
+        // Limit history size to prevent memory issues
+        const MAX_HISTORY_SIZE = 100;
+        if (newHistory.length > MAX_HISTORY_SIZE) {
+          newHistory.shift();
+        } else {
+          set({
+            history: newHistory,
+            historyIndex: newHistory.length - 1
+          });
+          return;
+        }
+
+        set({
+          history: newHistory,
+          historyIndex: newHistory.length - 1
+        });
+      },
+
+      undo: () => {
+        const state = get();
+        if (state.historyIndex < 0) return;
+
+        const action = state.history[state.historyIndex];
+        if (action) {
+          set({
+            data: action.data.beforeData,
+            historyIndex: state.historyIndex - 1,
+            hasUnsavedChanges: true
+          });
+        }
+      },
+
+      redo: () => {
+        const state = get();
+        if (state.historyIndex >= state.history.length - 1) return;
+
+        const action = state.history[state.historyIndex + 1];
+        if (action) {
+          set({
+            data: action.data.afterData,
+            historyIndex: state.historyIndex + 1,
+            hasUnsavedChanges: true
+          });
+        }
+      },
+
+      canUndo: () => {
+        const state = get();
+        return state.historyIndex >= 0;
+      },
+
+      canRedo: () => {
+        const state = get();
+        return state.historyIndex < state.history.length - 1;
       },
 
       markSaved: () => set({ hasUnsavedChanges: false }),
@@ -384,6 +518,8 @@ export const useCsvStore = create<CsvState>()(
         clipboard: null,
         filters: [],
         sorts: [],
+        history: [],
+        historyIndex: -1,
         viewportRange: {
           startRow: 0,
           endRow: 50,
