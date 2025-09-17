@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { invoke } from '@tauri-apps/api';
 import { useCsvStore } from '../../store/csvStore';
 import { cn } from '../../lib/utils';
+import { ColumnMenu } from '../ColumnMenu';
+import { RowMenu } from '../RowMenu';
 import styles from './CsvTable.module.css';
 
 export function CsvTable() {
@@ -31,6 +34,7 @@ export function CsvTable() {
   const [editValue, setEditValue] = useState('');
 
   const parentRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   // Virtual scrolling for rows with performance optimizations
   const rowVirtualizer = useVirtualizer({
@@ -58,6 +62,26 @@ export function CsvTable() {
         ? element => element?.getBoundingClientRect().width
         : undefined,
   });
+
+  // Sync horizontal scroll between header and content
+  useEffect(() => {
+    const scrollElement = parentRef.current;
+    const headerElement = headerRef.current;
+
+    if (!scrollElement || !headerElement) return;
+
+    const handleScroll = () => {
+      if (headerElement) {
+        headerElement.scrollLeft = scrollElement.scrollLeft;
+      }
+    };
+
+    scrollElement.addEventListener('scroll', handleScroll);
+
+    return () => {
+      scrollElement.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
 
   useEffect(() => {
@@ -342,7 +366,7 @@ export function CsvTable() {
   return (
     <div className="flex-1 flex flex-col bg-background relative overflow-hidden">
       {/* Column Headers */}
-      <div className="sticky top-0 z-10 bg-muted border-b border-border shrink-0">
+      <div className="sticky top-0 z-10 bg-muted border-b border-border shrink-0 overflow-hidden">
         <div className="flex">
           {/* Row number column header */}
           <div
@@ -358,9 +382,9 @@ export function CsvTable() {
 
           {/* Column headers */}
           <div
-            className="flex relative overflow-hidden"
+            ref={headerRef}
+            className="flex relative overflow-x-hidden flex-1"
             style={{
-              width: `calc(100% - 48px)`, // Account for row number column
               height: '40px',
             }}
           >
@@ -399,7 +423,36 @@ export function CsvTable() {
                       handleColumnHeaderClick(virtualColumn.index, e);
                     }}
                   >
-                    {data.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
+                    <span className="flex-1 truncate">
+                      {data.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
+                    </span>
+                    <ColumnMenu
+                      columnIndex={virtualColumn.index}
+                      columnName={data.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
+                      onAddColumn={async (position) => {
+                        const newData = await invoke('add_column', {
+                          data,
+                          columnName: `Column ${data.headers.length + 1}`,
+                          position: position === 'before' ? virtualColumn.index : virtualColumn.index + 1
+                        });
+                        useCsvStore.getState().setData(newData as any);
+                      }}
+                      onDeleteColumn={async () => {
+                        const newData = await invoke('delete_column', {
+                          data,
+                          columnIndex: virtualColumn.index
+                        });
+                        useCsvStore.getState().setData(newData as any);
+                      }}
+                      onRenameColumn={async (newName) => {
+                        const newData = await invoke('rename_column', {
+                          data,
+                          columnIndex: virtualColumn.index,
+                          newName
+                        });
+                        useCsvStore.getState().setData(newData as any);
+                      }}
+                    />
                   </div>
                 );
               })}
@@ -429,30 +482,55 @@ export function CsvTable() {
           {rowVirtualizer.getVirtualItems().map((virtualRow) => (
             <div key={virtualRow.index} className="flex">
               {/* Row number */}
-              <div
-                className={cn(
-                  "w-12 border-r border-b border-border bg-muted/50 flex items-center justify-center text-xs text-muted-foreground cursor-pointer hover:bg-accent transition-colors",
-                  {
-                    'bg-primary/20 border-primary': selectedRange?.type === 'row' &&
-                      selectedRange.startRow <= virtualRow.index &&
-                      selectedRange.endRow >= virtualRow.index
-                  }
-                )}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  height: virtualRow.size,
-                  transform: `translateY(${virtualRow.start}px)`,
+              <RowMenu
+                rowIndex={virtualRow.index}
+                onAddRow={async (position) => {
+                  const newData = await invoke('add_row', {
+                    data,
+                    rowIndex: position === 'above' ? virtualRow.index : virtualRow.index + 1
+                  });
+                  useCsvStore.getState().setData(newData as any);
                 }}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleRowHeaderClick(virtualRow.index, e);
+                onDeleteRow={async () => {
+                  const newData = await invoke('delete_row', {
+                    data,
+                    rowIndex: virtualRow.index
+                  });
+                  useCsvStore.getState().setData(newData as any);
+                }}
+                onDuplicateRow={async () => {
+                  const newData = await invoke('duplicate_row', {
+                    data,
+                    rowIndex: virtualRow.index
+                  });
+                  useCsvStore.getState().setData(newData as any);
                 }}
               >
-                {virtualRow.index + 1}
-              </div>
+                <div
+                  className={cn(
+                    "w-12 border-r border-b border-border bg-muted/50 flex items-center justify-center text-xs text-muted-foreground cursor-pointer hover:bg-accent transition-colors",
+                    {
+                      'bg-primary/20 border-primary': selectedRange?.type === 'row' &&
+                        selectedRange.startRow <= virtualRow.index &&
+                        selectedRange.endRow >= virtualRow.index
+                    }
+                  )}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    height: virtualRow.size,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleRowHeaderClick(virtualRow.index, e);
+                  }}
+                >
+                  {virtualRow.index + 1}
+                </div>
+              </RowMenu>
 
               {/* Data cells */}
               {columnVirtualizer.getVirtualItems().map((virtualColumn) => {
