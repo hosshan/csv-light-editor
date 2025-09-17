@@ -42,11 +42,15 @@ export const ColumnMenu: React.FC<ColumnMenuProps> = ({
   onRenameColumn,
 }) => {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState(columnName);
-  const [addPosition, setAddPosition] = useState<'before' | 'after'>('after');
-  const [newColumnNameForAdd, setNewColumnNameForAdd] = useState('');
+
+  // Update newColumnName when columnName prop changes or dialog opens
+  React.useEffect(() => {
+    if (isRenameDialogOpen) {
+      setNewColumnName(columnName);
+    }
+  }, [isRenameDialogOpen, columnName]);
 
   const handleRename = () => {
     if (newColumnName.trim()) {
@@ -55,13 +59,6 @@ export const ColumnMenu: React.FC<ColumnMenuProps> = ({
     }
   };
 
-  const handleAddColumn = () => {
-    if (newColumnNameForAdd.trim()) {
-      onAddColumn(addPosition);
-      setIsAddDialogOpen(false);
-      setNewColumnNameForAdd('');
-    }
-  };
 
   const handleDelete = () => {
     onDeleteColumn();
@@ -83,19 +80,13 @@ export const ColumnMenu: React.FC<ColumnMenuProps> = ({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={() => {
-              setAddPosition('before');
-              setIsAddDialogOpen(true);
-            }}
+            onClick={() => onAddColumn('before')}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Add Column Before
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => {
-              setAddPosition('after');
-              setIsAddDialogOpen(true);
-            }}
+            onClick={() => onAddColumn('after')}
           >
             <ArrowRight className="mr-2 h-4 w-4" />
             Add Column After
@@ -143,43 +134,6 @@ export const ColumnMenu: React.FC<ColumnMenuProps> = ({
               Cancel
             </Button>
             <Button onClick={handleRename}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Column Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Column</DialogTitle>
-            <DialogDescription>
-              Add a new column {addPosition === 'before' ? 'before' : 'after'} "{columnName}"
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-column-name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="new-column-name"
-                value={newColumnNameForAdd}
-                onChange={(e) => setNewColumnNameForAdd(e.target.value)}
-                placeholder="New Column"
-                className="col-span-3"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleAddColumn();
-                  }
-                }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddColumn}>Add Column</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

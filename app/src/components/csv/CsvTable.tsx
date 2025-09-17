@@ -432,7 +432,7 @@ export function CsvTable() {
                       onAddColumn={async (position) => {
                         const newData = await invoke('add_column', {
                           data,
-                          columnName: `New Column`,
+                          columnName: `Column ${data.headers.length + 1}`,
                           position: position === 'before' ? virtualColumn.index : virtualColumn.index + 1
                         });
                         useCsvStore.getState().setData(newData as any);
