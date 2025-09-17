@@ -34,6 +34,7 @@ export function CsvTable() {
   const [editValue, setEditValue] = useState('');
 
   const parentRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   // Virtual scrolling for rows with performance optimizations
   const rowVirtualizer = useVirtualizer({
@@ -61,6 +62,26 @@ export function CsvTable() {
         ? element => element?.getBoundingClientRect().width
         : undefined,
   });
+
+  // Sync horizontal scroll between header and content
+  useEffect(() => {
+    const scrollElement = parentRef.current;
+    const headerElement = headerRef.current;
+
+    if (!scrollElement || !headerElement) return;
+
+    const handleScroll = () => {
+      if (headerElement) {
+        headerElement.scrollLeft = scrollElement.scrollLeft;
+      }
+    };
+
+    scrollElement.addEventListener('scroll', handleScroll);
+
+    return () => {
+      scrollElement.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
 
   useEffect(() => {
@@ -345,7 +366,7 @@ export function CsvTable() {
   return (
     <div className="flex-1 flex flex-col bg-background relative overflow-hidden">
       {/* Column Headers */}
-      <div className="sticky top-0 z-10 bg-muted border-b border-border shrink-0">
+      <div className="sticky top-0 z-10 bg-muted border-b border-border shrink-0 overflow-hidden">
         <div className="flex">
           {/* Row number column header */}
           <div
@@ -361,9 +382,9 @@ export function CsvTable() {
 
           {/* Column headers */}
           <div
-            className="flex relative overflow-hidden"
+            ref={headerRef}
+            className="flex relative overflow-x-hidden flex-1"
             style={{
-              width: `calc(100% - 48px)`, // Account for row number column
               height: '40px',
             }}
           >
