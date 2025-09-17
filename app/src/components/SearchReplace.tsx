@@ -216,228 +216,290 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
           <DialogTitle>Find & Replace</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
-              <TabsTrigger value="find">Find</TabsTrigger>
-              <TabsTrigger value="replace">Replace</TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+            <TabsTrigger value="find">Find</TabsTrigger>
+            <TabsTrigger value="replace">Replace</TabsTrigger>
+          </TabsList>
 
-            <div className="flex-1 overflow-y-auto">
-              <div className="space-y-4 mt-4 p-1">
-                {/* Search Options */}
-                <div className="space-y-3">
-                  <div className="grid grid-cols-4 gap-4 items-center">
-                    <Label htmlFor="search" className="text-right">
-                      Find:
-                    </Label>
-                    <Input
-                      id="search"
-                      value={searchText}
-                      onChange={(e) => setSearchText(e.target.value)}
-                      placeholder="Enter search text..."
-                      className="col-span-3"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && activeTab === 'find') {
-                          handleSearch();
-                        }
-                      }}
-                    />
-                  </div>
+          <TabsContent value="find" className="flex-1 overflow-y-auto mt-2 min-h-0">
+            <div className="space-y-4 p-4">
+              {/* Search Options */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-4 gap-4 items-center">
+                  <Label htmlFor="search" className="text-right">
+                    Find:
+                  </Label>
+                  <Input
+                    id="search"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    placeholder="Enter search text..."
+                    className="col-span-3"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearch();
+                      }
+                    }}
+                  />
+                </div>
 
-                  {activeTab === 'replace' && (
-                    <div className="grid grid-cols-4 gap-4 items-center">
-                      <Label htmlFor="replace" className="text-right">
-                        Replace with:
-                      </Label>
-                      <Input
-                        id="replace"
-                        value={replaceText}
-                        onChange={(e) => setReplaceText(e.target.value)}
-                        placeholder="Enter replacement text..."
-                        className="col-span-3"
+                <div className="grid grid-cols-4 gap-4 items-center">
+                  <Label className="text-right">Column:</Label>
+                  <Select value={selectedColumn} onValueChange={setSelectedColumn}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Columns</SelectItem>
+                      {csvData.headers.map((header, index) => (
+                        <SelectItem key={index} value={index.toString()}>
+                          {header}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="col-start-2 col-span-3 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="case-sensitive"
+                        checked={caseSensitive}
+                        onCheckedChange={(checked) => setCaseSensitive(!!checked)}
                       />
+                      <Label htmlFor="case-sensitive">Case sensitive</Label>
                     </div>
-                  )}
-
-                  <div className="grid grid-cols-4 gap-4 items-center">
-                    <Label className="text-right">Column:</Label>
-                    <Select value={selectedColumn} onValueChange={setSelectedColumn}>
-                      <SelectTrigger className="col-span-3">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Columns</SelectItem>
-                        {csvData.headers.map((header, index) => (
-                          <SelectItem key={index} value={index.toString()}>
-                            {header}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-4">
-                    <div className="col-start-2 col-span-3 space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="case-sensitive"
-                          checked={caseSensitive}
-                          onCheckedChange={(checked) => setCaseSensitive(!!checked)}
-                        />
-                        <Label htmlFor="case-sensitive">Case sensitive</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="whole-word"
-                          checked={wholeWord}
-                          onCheckedChange={(checked) => setWholeWord(!!checked)}
-                        />
-                        <Label htmlFor="whole-word">Whole word</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="regex"
-                          checked={useRegex}
-                          onCheckedChange={(checked) => setUseRegex(!!checked)}
-                        />
-                        <Label htmlFor="regex">Regular expression</Label>
-                      </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="whole-word"
+                        checked={wholeWord}
+                        onCheckedChange={(checked) => setWholeWord(!!checked)}
+                      />
+                      <Label htmlFor="whole-word">Whole word</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="regex"
+                        checked={useRegex}
+                        onCheckedChange={(checked) => setUseRegex(!!checked)}
+                      />
+                      <Label htmlFor="regex">Regular expression</Label>
                     </div>
                   </div>
                 </div>
-
-                {/* Error/Success Alert */}
-                {error && (
-                  <Alert variant={error.includes('Successfully') ? 'default' : 'destructive'}>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <TabsContent value="find" className="space-y-4 h-full flex flex-col">
-                  <div className="flex gap-2 flex-shrink-0">
-                    <Button onClick={handleSearch} disabled={isSearching}>
-                      {isSearching ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Searching...
-                        </>
-                      ) : (
-                        <>
-                          <Search className="mr-2 h-4 w-4" />
-                          Find All
-                        </>
-                      )}
-                    </Button>
-                    {searchResults.length > 0 && (
-                      <Badge variant="secondary">
-                        {searchResults.length} result(s)
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Search Results */}
-                  {searchResults.length > 0 && (
-                    <div className="flex-1 min-h-0">
-                      <ScrollArea className="h-full border rounded-md">
-                        <div className="p-2">
-                          {searchResults.map((result, idx) => (
-                            <div
-                              key={idx}
-                              className="p-2 hover:bg-muted rounded cursor-pointer transition-colors"
-                              onClick={() => handleResultClick(result)}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">
-                                  Row {result.row_index + 1}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">
-                                  {csvData.headers[result.column_index]}
-                                </Badge>
-                              </div>
-                              <div className="text-sm mt-1 font-mono text-muted-foreground">
-                                {result.context}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="replace" className="space-y-4 h-full flex flex-col">
-                  <div className="flex gap-2 flex-shrink-0">
-                    <Button onClick={handlePreviewReplace} disabled={isReplacing}>
-                      {isReplacing ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        'Preview'
-                      )}
-                    </Button>
-                    <Button
-                      onClick={handleReplaceAll}
-                      disabled={isReplacing || replacePreview.length === 0}
-                      variant="destructive"
-                    >
-                      <Replace className="mr-2 h-4 w-4" />
-                      Replace All
-                    </Button>
-                    {replacePreview.length > 0 && (
-                      <Badge variant="secondary">
-                        {replacePreview.length} replacement(s)
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Replace Preview */}
-                  {replacePreview.length > 0 && (
-                    <div className="flex-1 min-h-0">
-                      <ScrollArea className="h-full border rounded-md">
-                        <div className="p-2">
-                          {replacePreview.slice(0, 100).map((preview, idx) => (
-                            <div
-                              key={idx}
-                              className="p-2 hover:bg-muted rounded transition-colors"
-                            >
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge variant="outline" className="text-xs">
-                                  Row {preview.row_index + 1}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">
-                                  {csvData.headers[preview.column_index]}
-                                </Badge>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>
-                                  <span className="text-muted-foreground">Original: </span>
-                                  <span className="font-mono">{preview.original_value}</span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">New: </span>
-                                  <span className="font-mono text-green-600">{preview.new_value}</span>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          {replacePreview.length > 100 && (
-                            <div className="text-center text-sm text-muted-foreground mt-2">
-                              Showing first 100 of {replacePreview.length} replacements
-                            </div>
-                          )}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  )}
-                </TabsContent>
               </div>
+
+              {/* Error/Success Alert */}
+              {error && (
+                <Alert variant={error.includes('Successfully') ? 'default' : 'destructive'}>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-2">
+                <Button onClick={handleSearch} disabled={isSearching}>
+                  {isSearching ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Searching...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="mr-2 h-4 w-4" />
+                      Find All
+                    </>
+                  )}
+                </Button>
+                {searchResults.length > 0 && (
+                  <Badge variant="secondary">
+                    {searchResults.length} result(s)
+                  </Badge>
+                )}
+              </div>
+
+              {/* Search Results */}
+              {searchResults.length > 0 && (
+                <ScrollArea className="h-64 border rounded-md">
+                  <div className="p-2">
+                    {searchResults.map((result, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2 hover:bg-muted rounded cursor-pointer transition-colors"
+                        onClick={() => handleResultClick(result)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            Row {result.row_index + 1}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {csvData.headers[result.column_index]}
+                          </Badge>
+                        </div>
+                        <div className="text-sm mt-1 font-mono text-muted-foreground">
+                          {result.context}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
             </div>
-          </Tabs>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="replace" className="flex-1 overflow-y-auto mt-2 min-h-0">
+            <div className="space-y-4 p-4">
+              {/* Search Options */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-4 gap-4 items-center">
+                  <Label htmlFor="search-replace" className="text-right">
+                    Find:
+                  </Label>
+                  <Input
+                    id="search-replace"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    placeholder="Enter search text..."
+                    className="col-span-3"
+                  />
+                </div>
+
+                <div className="grid grid-cols-4 gap-4 items-center">
+                  <Label htmlFor="replace" className="text-right">
+                    Replace with:
+                  </Label>
+                  <Input
+                    id="replace"
+                    value={replaceText}
+                    onChange={(e) => setReplaceText(e.target.value)}
+                    placeholder="Enter replacement text..."
+                    className="col-span-3"
+                  />
+                </div>
+
+                <div className="grid grid-cols-4 gap-4 items-center">
+                  <Label className="text-right">Column:</Label>
+                  <Select value={selectedColumn} onValueChange={setSelectedColumn}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Columns</SelectItem>
+                      {csvData.headers.map((header, index) => (
+                        <SelectItem key={index} value={index.toString()}>
+                          {header}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="col-start-2 col-span-3 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="case-sensitive-replace"
+                        checked={caseSensitive}
+                        onCheckedChange={(checked) => setCaseSensitive(!!checked)}
+                      />
+                      <Label htmlFor="case-sensitive-replace">Case sensitive</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="whole-word-replace"
+                        checked={wholeWord}
+                        onCheckedChange={(checked) => setWholeWord(!!checked)}
+                      />
+                      <Label htmlFor="whole-word-replace">Whole word</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="regex-replace"
+                        checked={useRegex}
+                        onCheckedChange={(checked) => setUseRegex(!!checked)}
+                      />
+                      <Label htmlFor="regex-replace">Regular expression</Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Error/Success Alert */}
+              {error && (
+                <Alert variant={error.includes('Successfully') ? 'default' : 'destructive'}>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-2">
+                <Button onClick={handlePreviewReplace} disabled={isReplacing}>
+                  {isReplacing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Preview'
+                  )}
+                </Button>
+                <Button
+                  onClick={handleReplaceAll}
+                  disabled={isReplacing || replacePreview.length === 0}
+                  variant="destructive"
+                >
+                  <Replace className="mr-2 h-4 w-4" />
+                  Replace All
+                </Button>
+                {replacePreview.length > 0 && (
+                  <Badge variant="secondary">
+                    {replacePreview.length} replacement(s)
+                  </Badge>
+                )}
+              </div>
+
+              {/* Replace Preview */}
+              {replacePreview.length > 0 && (
+                <ScrollArea className="h-64 border rounded-md">
+                  <div className="p-2">
+                    {replacePreview.slice(0, 100).map((preview, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2 hover:bg-muted rounded transition-colors"
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="text-xs">
+                            Row {preview.row_index + 1}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {csvData.headers[preview.column_index]}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">Original: </span>
+                            <span className="font-mono">{preview.original_value}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">New: </span>
+                            <span className="font-mono text-green-600">{preview.new_value}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {replacePreview.length > 100 && (
+                      <div className="text-center text-sm text-muted-foreground mt-2">
+                        Showing first 100 of {replacePreview.length} replacements
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

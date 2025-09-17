@@ -127,21 +127,20 @@ export const ImportExportSettings: React.FC<ImportExportSettingsProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
-          <Tabs defaultValue="export" className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
-              <TabsTrigger value="export">
-                <FileDown className="mr-2 h-4 w-4" />
-                Export Settings
-              </TabsTrigger>
-              <TabsTrigger value="import">
-                <FileUp className="mr-2 h-4 w-4" />
-                Import Settings
-              </TabsTrigger>
-            </TabsList>
+        <Tabs defaultValue="export" className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+            <TabsTrigger value="export">
+              <FileDown className="mr-2 h-4 w-4" />
+              Export Settings
+            </TabsTrigger>
+            <TabsTrigger value="import">
+              <FileUp className="mr-2 h-4 w-4" />
+              Import Settings
+            </TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="export" className="flex-1 overflow-y-auto mt-2 min-h-0">
-              <div className="space-y-4 p-4 pb-8">
+          <TabsContent value="export" className="flex-1 overflow-y-auto mt-2 min-h-0">
+            <div className="space-y-4 p-4 pb-8">
             {/* File Format Section */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">File Format</h3>
@@ -439,12 +438,11 @@ export const ImportExportSettings: React.FC<ImportExportSettingsProps> = ({
                 Reset to Defaults
               </Button>
             </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+          </div>
+        </TabsContent>
+      </Tabs>
 
-        <DialogFooter className="flex-shrink-0">
+      <DialogFooter className="flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
