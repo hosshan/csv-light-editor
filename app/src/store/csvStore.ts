@@ -238,8 +238,11 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data) return;
 
-        // Store before state for history
-        const beforeData = { ...state.data };
+        // Store before state for history - deep copy rows
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
 
         const newRows = [...state.data.rows];
         if (newRows[cell.row]) {
@@ -350,10 +353,14 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data || !state.clipboard) return;
 
-        // Store before state for history
-        const beforeData = { ...state.data };
+        // Store before state for history - deep copy rows
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
 
-        const newRows = [...state.data.rows];
+        // Create deep copy of rows for modification
+        const newRows = state.data.rows.map(row => [...row]);
         const target = targetCell || state.selectedCell;
 
         if (!target) return;
@@ -409,8 +416,11 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data) return;
 
-        // Store before state for history
-        const beforeData = { ...state.data };
+        // Store before state for history - deep copy rows
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
 
         const newRows = [...state.data.rows];
         const selection = state.selectedCell || state.selectedRange || undefined;
@@ -522,7 +532,10 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data) return;
 
-        const beforeData = { ...state.data };
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
         const newRows = [...state.data.rows];
         const newRow = new Array(state.data.headers.length).fill('');
 
@@ -556,7 +569,10 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data) return;
 
-        const beforeData = { ...state.data };
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
         const newRows = [...state.data.rows];
         newRows.splice(rowIndex, 1);
 
@@ -587,7 +603,10 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data || !state.data.rows[rowIndex]) return;
 
-        const beforeData = { ...state.data };
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
         const newRows = [...state.data.rows];
         const duplicatedRow = [...state.data.rows[rowIndex]];
         newRows.splice(rowIndex + 1, 0, duplicatedRow);
@@ -620,7 +639,10 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data) return;
 
-        const beforeData = { ...state.data };
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
         const insertIndex = position === 'before' ? columnIndex : columnIndex + 1;
 
         const newHeaders = [...state.data.headers];
@@ -660,7 +682,10 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data) return;
 
-        const beforeData = { ...state.data };
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
 
         const newHeaders = [...state.data.headers];
         newHeaders.splice(columnIndex, 1);
@@ -699,7 +724,10 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data) return;
 
-        const beforeData = { ...state.data };
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
 
         const newHeaders = [...state.data.headers];
         newHeaders[columnIndex] = newName;
@@ -732,7 +760,10 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data) return;
 
-        const beforeData = { ...state.data };
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
 
         const historyAction: HistoryAction = {
           type: 'replace_all',
