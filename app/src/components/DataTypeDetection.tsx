@@ -7,21 +7,20 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, AlertCircle, CheckCircle2, Info } from 'lucide-react';
-import type { CsvData } from '@/types';
+import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import type { CsvData } from '@/types/csv';
 
 interface DataTypeDetectionProps {
   isOpen: boolean;

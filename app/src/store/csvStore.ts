@@ -71,6 +71,19 @@ interface CsvState {
   canUndo: () => boolean;
   canRedo: () => boolean;
 
+  // Row operations with history
+  addRow: (position: 'above' | 'below', rowIndex: number) => void;
+  deleteRow: (rowIndex: number) => void;
+  duplicateRow: (rowIndex: number) => void;
+
+  // Column operations with history
+  addColumn: (position: 'before' | 'after', columnIndex: number) => void;
+  deleteColumn: (columnIndex: number) => void;
+  renameColumn: (columnIndex: number, newName: string) => void;
+
+  // Batch operations with history
+  replaceAll: (newData: CsvData, description?: string) => void;
+
   markSaved: () => void;
   reset: () => void;
 }
@@ -502,6 +515,241 @@ export const useCsvStore = create<CsvState>()(
       canRedo: () => {
         const state = get();
         return state.historyIndex < state.history.length - 1;
+      },
+
+      // Row operations with history
+      addRow: (position, rowIndex) => {
+        const state = get();
+        if (!state.data) return;
+
+        const beforeData = { ...state.data };
+        const newRows = [...state.data.rows];
+        const newRow = new Array(state.data.headers.length).fill('');
+
+        const insertIndex = position === 'above' ? rowIndex : rowIndex + 1;
+        newRows.splice(insertIndex, 0, newRow);
+
+        const afterData = {
+          ...state.data,
+          rows: newRows
+        };
+
+        const historyAction: HistoryAction = {
+          type: 'add_row',
+          data: {
+            beforeData,
+            afterData,
+            selection: { row: insertIndex, column: 0, value: '' }
+          },
+          timestamp: Date.now()
+        };
+
+        set({
+          data: afterData,
+          hasUnsavedChanges: true
+        });
+
+        get().addToHistory(historyAction);
+      },
+
+      deleteRow: (rowIndex) => {
+        const state = get();
+        if (!state.data) return;
+
+        const beforeData = { ...state.data };
+        const newRows = [...state.data.rows];
+        newRows.splice(rowIndex, 1);
+
+        const afterData = {
+          ...state.data,
+          rows: newRows
+        };
+
+        const historyAction: HistoryAction = {
+          type: 'delete_row',
+          data: {
+            beforeData,
+            afterData,
+            selection: { row: rowIndex, column: 0, value: '' }
+          },
+          timestamp: Date.now()
+        };
+
+        set({
+          data: afterData,
+          hasUnsavedChanges: true
+        });
+
+        get().addToHistory(historyAction);
+      },
+
+      duplicateRow: (rowIndex) => {
+        const state = get();
+        if (!state.data || !state.data.rows[rowIndex]) return;
+
+        const beforeData = { ...state.data };
+        const newRows = [...state.data.rows];
+        const duplicatedRow = [...state.data.rows[rowIndex]];
+        newRows.splice(rowIndex + 1, 0, duplicatedRow);
+
+        const afterData = {
+          ...state.data,
+          rows: newRows
+        };
+
+        const historyAction: HistoryAction = {
+          type: 'duplicate_row',
+          data: {
+            beforeData,
+            afterData,
+            selection: { row: rowIndex + 1, column: 0, value: '' }
+          },
+          timestamp: Date.now()
+        };
+
+        set({
+          data: afterData,
+          hasUnsavedChanges: true
+        });
+
+        get().addToHistory(historyAction);
+      },
+
+      // Column operations with history
+      addColumn: (position, columnIndex) => {
+        const state = get();
+        if (!state.data) return;
+
+        const beforeData = { ...state.data };
+        const insertIndex = position === 'before' ? columnIndex : columnIndex + 1;
+
+        const newHeaders = [...state.data.headers];
+        newHeaders.splice(insertIndex, 0, `Column ${state.data.headers.length + 1}`);
+
+        const newRows = state.data.rows.map(row => {
+          const newRow = [...row];
+          newRow.splice(insertIndex, 0, '');
+          return newRow;
+        });
+
+        const afterData = {
+          ...state.data,
+          headers: newHeaders,
+          rows: newRows
+        };
+
+        const historyAction: HistoryAction = {
+          type: 'add_column',
+          data: {
+            beforeData,
+            afterData,
+            selection: { row: 0, column: insertIndex, value: '' }
+          },
+          timestamp: Date.now()
+        };
+
+        set({
+          data: afterData,
+          hasUnsavedChanges: true
+        });
+
+        get().addToHistory(historyAction);
+      },
+
+      deleteColumn: (columnIndex) => {
+        const state = get();
+        if (!state.data) return;
+
+        const beforeData = { ...state.data };
+
+        const newHeaders = [...state.data.headers];
+        newHeaders.splice(columnIndex, 1);
+
+        const newRows = state.data.rows.map(row => {
+          const newRow = [...row];
+          newRow.splice(columnIndex, 1);
+          return newRow;
+        });
+
+        const afterData = {
+          ...state.data,
+          headers: newHeaders,
+          rows: newRows
+        };
+
+        const historyAction: HistoryAction = {
+          type: 'delete_column',
+          data: {
+            beforeData,
+            afterData,
+            selection: { row: 0, column: Math.max(0, columnIndex - 1), value: '' }
+          },
+          timestamp: Date.now()
+        };
+
+        set({
+          data: afterData,
+          hasUnsavedChanges: true
+        });
+
+        get().addToHistory(historyAction);
+      },
+
+      renameColumn: (columnIndex, newName) => {
+        const state = get();
+        if (!state.data) return;
+
+        const beforeData = { ...state.data };
+
+        const newHeaders = [...state.data.headers];
+        newHeaders[columnIndex] = newName;
+
+        const afterData = {
+          ...state.data,
+          headers: newHeaders
+        };
+
+        const historyAction: HistoryAction = {
+          type: 'rename_column',
+          data: {
+            beforeData,
+            afterData,
+            selection: { row: 0, column: columnIndex, value: newName }
+          },
+          timestamp: Date.now()
+        };
+
+        set({
+          data: afterData,
+          hasUnsavedChanges: true
+        });
+
+        get().addToHistory(historyAction);
+      },
+
+      // Batch operations with history
+      replaceAll: (newData, description) => {
+        const state = get();
+        if (!state.data) return;
+
+        const beforeData = { ...state.data };
+
+        const historyAction: HistoryAction = {
+          type: 'replace_all',
+          data: {
+            beforeData,
+            afterData: newData,
+            description: description || 'Replace all'
+          },
+          timestamp: Date.now()
+        };
+
+        set({
+          data: newData,
+          hasUnsavedChanges: true
+        });
+
+        get().addToHistory(historyAction);
       },
 
       markSaved: () => set({ hasUnsavedChanges: false }),

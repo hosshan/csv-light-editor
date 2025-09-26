@@ -53,11 +53,15 @@ export interface SortConfig {
 }
 
 export interface HistoryAction {
-  type: 'cell_update' | 'range_update' | 'paste' | 'delete' | 'cut';
+  type: 'cell_update' | 'range_update' | 'paste' | 'delete' | 'cut' |
+        'add_row' | 'delete_row' | 'duplicate_row' |
+        'add_column' | 'delete_column' | 'rename_column' |
+        'replace_all';
   data: {
     beforeData: CsvData;
     afterData: CsvData;
     selection?: CsvCell | CsvSelection;
+    description?: string;
   };
   timestamp: number;
 }

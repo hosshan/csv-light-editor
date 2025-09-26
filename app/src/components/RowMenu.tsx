@@ -14,8 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Plus, Trash2, Copy, ArrowUp, ArrowDown } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Trash2, Copy, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface RowMenuProps {
   rowIndex: number;
@@ -74,7 +74,7 @@ export const RowMenu: React.FC<RowMenuProps> = ({
           <DialogHeader>
             <DialogTitle>Delete Row</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete row {rowIndex + 1}? This action cannot be undone.
+              Are you sure you want to delete row {rowIndex + 1}? You can undo this action with Cmd+Z.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

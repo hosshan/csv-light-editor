@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Replace, Loader2, AlertCircle } from 'lucide-react';
-import type { CsvData } from '@/types';
+import type { CsvData } from '@/types/csv';
 
 interface SearchReplaceProps {
   isOpen: boolean;
@@ -252,7 +252,7 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Columns</SelectItem>
-                      {csvData.headers.map((header, index) => (
+                      {csvData.headers.map((header: string, index: number) => (
                         <SelectItem key={index} value={index.toString()}>
                           {header}
                         </SelectItem>
@@ -387,7 +387,7 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Columns</SelectItem>
-                      {csvData.headers.map((header, index) => (
+                      {csvData.headers.map((header: string, index: number) => (
                         <SelectItem key={index} value={index.toString()}>
                           {header}
                         </SelectItem>
