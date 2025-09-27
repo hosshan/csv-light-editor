@@ -5,14 +5,10 @@ import {
   SaveAll,
   Undo,
   Redo,
-  Filter,
   Search,
   Settings,
   FileText,
-  Shield,
-  Replace,
-  FileInput,
-  Database
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useCsvStore } from '../../store/csvStore';
@@ -38,7 +34,8 @@ export function Toolbar({ onSave, onSaveAs }: ToolbarProps = {}) {
     undo,
     redo,
     canUndo,
-    canRedo
+    canRedo,
+    replaceAll
   } = useCsvStore();
   const tauri = useTauri();
 
@@ -206,7 +203,7 @@ export function Toolbar({ onSave, onSaveAs }: ToolbarProps = {}) {
             isOpen={isSearchReplaceDialogOpen}
             onClose={() => setIsSearchReplaceDialogOpen(false)}
             csvData={data}
-            onDataChange={(newData) => setData(newData)}
+            onDataChange={(newData) => replaceAll(newData, 'Replace all occurrences')}
           />
         </>
       )}
