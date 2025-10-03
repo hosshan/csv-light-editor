@@ -6,10 +6,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import {
   ChevronDown,
-  Plus,
   Trash2,
   Edit2,
   ArrowLeft,
@@ -35,7 +34,7 @@ interface ColumnMenuProps {
 }
 
 export const ColumnMenu: React.FC<ColumnMenuProps> = ({
-  columnIndex,
+  columnIndex: _columnIndex,
   columnName,
   onAddColumn,
   onDeleteColumn,
@@ -144,7 +143,7 @@ export const ColumnMenu: React.FC<ColumnMenuProps> = ({
           <DialogHeader>
             <DialogTitle>Delete Column</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the column "{columnName}"? This action cannot be undone.
+              Are you sure you want to delete the column "{columnName}"? You can undo this action with Cmd+Z.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

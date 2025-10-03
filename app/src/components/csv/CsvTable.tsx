@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { invoke } from '@tauri-apps/api';
 import { useCsvStore } from '../../store/csvStore';
 import { cn } from '../../lib/utils';
 import { ColumnMenu } from '../ColumnMenu';
@@ -28,7 +27,13 @@ export function CsvTable() {
     undo,
     redo,
     canUndo,
-    canRedo
+    canRedo,
+    addRow,
+    deleteRow,
+    duplicateRow,
+    addColumn,
+    deleteColumn,
+    renameColumn
   } = useCsvStore();
 
   const [editValue, setEditValue] = useState('');
@@ -429,28 +434,14 @@ export function CsvTable() {
                     <ColumnMenu
                       columnIndex={virtualColumn.index}
                       columnName={data.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
-                      onAddColumn={async (position) => {
-                        const newData = await invoke('add_column', {
-                          data,
-                          columnName: `Column ${data.headers.length + 1}`,
-                          position: position === 'before' ? virtualColumn.index : virtualColumn.index + 1
-                        });
-                        useCsvStore.getState().setData(newData as any);
+                      onAddColumn={(position) => {
+                        addColumn(position, virtualColumn.index);
                       }}
-                      onDeleteColumn={async () => {
-                        const newData = await invoke('delete_column', {
-                          data,
-                          columnIndex: virtualColumn.index
-                        });
-                        useCsvStore.getState().setData(newData as any);
+                      onDeleteColumn={() => {
+                        deleteColumn(virtualColumn.index);
                       }}
-                      onRenameColumn={async (newName) => {
-                        const newData = await invoke('rename_column', {
-                          data,
-                          columnIndex: virtualColumn.index,
-                          newName
-                        });
-                        useCsvStore.getState().setData(newData as any);
+                      onRenameColumn={(newName) => {
+                        renameColumn(virtualColumn.index, newName);
                       }}
                     />
                   </div>
@@ -484,26 +475,14 @@ export function CsvTable() {
               {/* Row number */}
               <RowMenu
                 rowIndex={virtualRow.index}
-                onAddRow={async (position) => {
-                  const newData = await invoke('add_row', {
-                    data,
-                    rowIndex: position === 'above' ? virtualRow.index : virtualRow.index + 1
-                  });
-                  useCsvStore.getState().setData(newData as any);
+                onAddRow={(position) => {
+                  addRow(position, virtualRow.index);
                 }}
-                onDeleteRow={async () => {
-                  const newData = await invoke('delete_row', {
-                    data,
-                    rowIndex: virtualRow.index
-                  });
-                  useCsvStore.getState().setData(newData as any);
+                onDeleteRow={() => {
+                  deleteRow(virtualRow.index);
                 }}
-                onDuplicateRow={async () => {
-                  const newData = await invoke('duplicate_row', {
-                    data,
-                    rowIndex: virtualRow.index
-                  });
-                  useCsvStore.getState().setData(newData as any);
+                onDuplicateRow={() => {
+                  duplicateRow(virtualRow.index);
                 }}
               >
                 <div
