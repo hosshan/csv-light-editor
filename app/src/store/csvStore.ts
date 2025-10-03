@@ -16,6 +16,10 @@ interface CsvState {
   // Viewport state
   viewportRange: ViewportRange;
 
+  // Column width state
+  columnWidths: Record<number, number>;
+  defaultColumnWidth: number;
+
   // Editing state
   editingCell: CsvCell | null;
   hasUnsavedChanges: boolean;
@@ -84,6 +88,11 @@ interface CsvState {
   // Batch operations with history
   replaceAll: (newData: CsvData, description?: string) => void;
 
+  // Column width operations
+  setColumnWidth: (columnIndex: number, width: number) => void;
+  getColumnWidth: (columnIndex: number) => number;
+  resetColumnWidths: () => void;
+
   markSaved: () => void;
   reset: () => void;
 }
@@ -106,6 +115,9 @@ export const useCsvStore = create<CsvState>()(
         startColumn: 0,
         endColumn: 10
       },
+
+      columnWidths: {},
+      defaultColumnWidth: 150,
 
       editingCell: null,
       hasUnsavedChanges: false,
@@ -773,6 +785,26 @@ export const useCsvStore = create<CsvState>()(
         get().addToHistory(historyAction);
       },
 
+      // Column width operations
+      setColumnWidth: (columnIndex, width) => {
+        const state = get();
+        set({
+          columnWidths: {
+            ...state.columnWidths,
+            [columnIndex]: width
+          }
+        });
+      },
+
+      getColumnWidth: (columnIndex) => {
+        const state = get();
+        return state.columnWidths[columnIndex] || state.defaultColumnWidth;
+      },
+
+      resetColumnWidths: () => {
+        set({ columnWidths: {} });
+      },
+
       markSaved: () => set({ hasUnsavedChanges: false }),
 
       reset: () => set({
@@ -794,7 +826,9 @@ export const useCsvStore = create<CsvState>()(
           endRow: 50,
           startColumn: 0,
           endColumn: 10
-        }
+        },
+        columnWidths: {},
+        defaultColumnWidth: 150
       })
     }),
     { name: 'csv-store' }
