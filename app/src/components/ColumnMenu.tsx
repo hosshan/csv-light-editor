@@ -41,7 +41,6 @@ export const ColumnMenu: React.FC<ColumnMenuProps> = ({
   onRenameColumn,
 }) => {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState(columnName);
 
   // Update newColumnName when columnName prop changes or dialog opens
@@ -59,10 +58,6 @@ export const ColumnMenu: React.FC<ColumnMenuProps> = ({
   };
 
 
-  const handleDelete = () => {
-    onDeleteColumn();
-    setIsDeleteDialogOpen(false);
-  };
 
   return (
     <>
@@ -92,7 +87,7 @@ export const ColumnMenu: React.FC<ColumnMenuProps> = ({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={() => setIsDeleteDialogOpen(true)}
+            onClick={onDeleteColumn}
             className="text-red-600"
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -137,25 +132,6 @@ export const ColumnMenu: React.FC<ColumnMenuProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Column</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the column "{columnName}"? You can undo this action with Cmd+Z.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };
