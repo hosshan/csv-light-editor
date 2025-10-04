@@ -122,9 +122,7 @@ function App() {
           {/* Wrap CsvTable in error boundary */}
           {data ? (
             <>
-              <div className="flex-1 overflow-hidden">
-                <CsvTable />
-              </div>
+              <CsvTable />
               <SelectionStatistics />
             </>
           ) : (
