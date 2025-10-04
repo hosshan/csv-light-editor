@@ -246,36 +246,61 @@ export function CsvTable() {
       }
     }
 
-    // Normal navigation
-    switch (e.key) {
-      case 'ArrowUp':
-        e.preventDefault();
-        newRow = Math.max(0, row - 1);
-        break;
-      case 'ArrowDown':
-        e.preventDefault();
-        newRow = Math.min(data.rows.length - 1, row + 1);
-        break;
-      case 'ArrowLeft':
-        e.preventDefault();
-        newColumn = Math.max(0, column - 1);
-        break;
-      case 'ArrowRight':
-        e.preventDefault();
-        newColumn = Math.min(data.headers.length - 1, column + 1);
-        break;
-      case 'Enter':
-      case 'F2':
-        e.preventDefault();
-        if (selectedCell) {
-          startEditing(selectedCell);
-        }
-        return;
-      case 'Delete':
-      case 'Backspace':
-        e.preventDefault();
-        deleteSelection();
-        return;
+    // Handle Command/Ctrl + Arrow keys for jumping to edges
+    if (e.metaKey || e.ctrlKey) {
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          newRow = 0; // Jump to first row
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          newRow = data.rows.length - 1; // Jump to last row
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          newColumn = 0; // Jump to first column
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          newColumn = data.headers.length - 1; // Jump to last column
+          break;
+        default:
+          // Let other Cmd/Ctrl combinations pass through
+          break;
+      }
+    } else {
+      // Normal navigation
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          newRow = Math.max(0, row - 1);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          newRow = Math.min(data.rows.length - 1, row + 1);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          newColumn = Math.max(0, column - 1);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          newColumn = Math.min(data.headers.length - 1, column + 1);
+          break;
+        case 'Enter':
+        case 'F2':
+          e.preventDefault();
+          if (selectedCell) {
+            startEditing(selectedCell);
+          }
+          return;
+        case 'Delete':
+        case 'Backspace':
+          e.preventDefault();
+          deleteSelection();
+          return;
+      }
     }
 
     if (newRow !== row || newColumn !== column) {
@@ -288,9 +313,19 @@ export function CsvTable() {
 
       // Scroll selected cell into view for keyboard navigation
       requestAnimationFrame(() => {
-        const scrollToIndex = newRow;
-        if (scrollToIndex >= 0 && scrollToIndex < (data?.rows.length || 0)) {
-          rowVirtualizer.scrollToIndex(scrollToIndex, {
+        // Scroll row into view
+        const scrollToRowIndex = newRow;
+        if (scrollToRowIndex >= 0 && scrollToRowIndex < (data?.rows.length || 0)) {
+          rowVirtualizer.scrollToIndex(scrollToRowIndex, {
+            align: 'auto',
+            behavior: 'smooth'
+          });
+        }
+
+        // Scroll column into view
+        const scrollToColumnIndex = newColumn;
+        if (scrollToColumnIndex >= 0 && scrollToColumnIndex < (data?.headers.length || 0)) {
+          columnVirtualizer.scrollToIndex(scrollToColumnIndex, {
             align: 'auto',
             behavior: 'smooth'
           });
