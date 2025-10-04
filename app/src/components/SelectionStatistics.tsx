@@ -3,6 +3,7 @@ import { useCsvStore } from '../store/csvStore';
 
 interface StatisticsData {
   count: number;
+  uniqueCount: number;
   sum?: number;
   min?: number;
   max?: number;
@@ -39,8 +40,12 @@ export const SelectionStatistics: React.FC = () => {
     const nonEmptyValues = values.filter(v => v.trim() !== '');
     const count = nonEmptyValues.length;
 
+    // Calculate unique count
+    const uniqueValues = new Set(nonEmptyValues);
+    const uniqueCount = uniqueValues.size;
+
     if (count === 0) {
-      return { count: 0, hasNumericData: false };
+      return { count: 0, uniqueCount: 0, hasNumericData: false };
     }
 
     // Try to parse as numbers
@@ -56,7 +61,7 @@ export const SelectionStatistics: React.FC = () => {
     const hasNumericData = numericValues.length > 0;
 
     if (!hasNumericData) {
-      return { count, hasNumericData: false };
+      return { count, uniqueCount, hasNumericData: false };
     }
 
     // Calculate numeric statistics
@@ -67,6 +72,7 @@ export const SelectionStatistics: React.FC = () => {
 
     return {
       count,
+      uniqueCount,
       sum,
       min,
       max,
@@ -96,6 +102,10 @@ export const SelectionStatistics: React.FC = () => {
       <div className="flex items-center gap-6">
         <span className="font-medium">
           アイテム数: {statistics.count.toLocaleString()}
+        </span>
+
+        <span>
+          ユニーク数: {statistics.uniqueCount.toLocaleString()}
         </span>
 
         {statistics.hasNumericData && (
