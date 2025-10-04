@@ -16,6 +16,7 @@ import { useTauri } from '../../hooks/useTauri';
 import { DataTypeDetection } from '../DataTypeDetection';
 import { SearchReplace } from '../SearchReplace';
 import { ImportExportSettings } from '../ImportExportSettings';
+import { SortMenu } from '../SortMenu';
 
 interface ToolbarProps {
   onSave?: () => void;
@@ -35,7 +36,10 @@ export function Toolbar({ onSave, onSaveAs }: ToolbarProps = {}) {
     redo,
     canUndo,
     canRedo,
-    replaceAll
+    replaceAll,
+    currentSort,
+    applySorting,
+    clearSorting
   } = useCsvStore();
   const tauri = useTauri();
 
@@ -163,6 +167,15 @@ export function Toolbar({ onSave, onSaveAs }: ToolbarProps = {}) {
             <Shield className="h-4 w-4" />
             <span>Validate</span>
           </Button>
+
+          {data && (
+            <SortMenu
+              headers={data.headers}
+              currentSort={currentSort}
+              onSortChange={applySorting}
+              onClearSort={clearSorting}
+            />
+          )}
         </div>
       </div>
 
