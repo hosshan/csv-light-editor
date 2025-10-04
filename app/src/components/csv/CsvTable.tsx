@@ -4,6 +4,7 @@ import { useCsvStore } from '../../store/csvStore';
 import { cn } from '../../lib/utils';
 import { ColumnMenu } from '../ColumnMenu';
 import { RowMenu } from '../RowMenu';
+import { ColumnResizeHandle } from './ColumnResizeHandle';
 import styles from './CsvTable.module.css';
 
 export function CsvTable() {
@@ -33,7 +34,10 @@ export function CsvTable() {
     duplicateRow,
     addColumn,
     deleteColumn,
-    renameColumn
+    renameColumn,
+    setColumnWidth,
+    getColumnWidth,
+    columnWidths
   } = useCsvStore();
 
   const [editValue, setEditValue] = useState('');
@@ -58,7 +62,7 @@ export function CsvTable() {
   const columnVirtualizer = useVirtualizer({
     count: data?.headers.length || 0,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 150, // Increased default column width
+    estimateSize: (index) => getColumnWidth(index),
     overscan: 8, // Increased overscan for horizontal scrolling
     horizontal: true,
     measureElement:
@@ -67,6 +71,14 @@ export function CsvTable() {
         ? element => element?.getBoundingClientRect().width
         : undefined,
   });
+
+  // Force column virtualizer to recalculate when column widths change
+  React.useEffect(() => {
+    // Simple approach: just trigger measure when widths change
+    if (columnVirtualizer) {
+      columnVirtualizer.measure();
+    }
+  }, [columnWidths, columnVirtualizer]);
 
   // Sync horizontal scroll between header and content
   useEffect(() => {
@@ -409,7 +421,7 @@ export function CsvTable() {
                   <div
                     key={virtualColumn.index}
                     className={cn(
-                      "border-r border-border bg-muted/80 flex items-center px-2 text-xs font-medium truncate cursor-pointer hover:bg-accent transition-colors",
+                      "border-r border-border bg-muted/80 flex items-center px-2 text-xs font-medium truncate cursor-pointer hover:bg-accent transition-colors relative overflow-visible",
                       {
                         'bg-primary/20 border-primary': isColumnSelected
                       }
@@ -443,6 +455,11 @@ export function CsvTable() {
                       onRenameColumn={(newName) => {
                         renameColumn(virtualColumn.index, newName);
                       }}
+                    />
+                    <ColumnResizeHandle
+                      columnIndex={virtualColumn.index}
+                      onResize={setColumnWidth}
+                      currentWidth={getColumnWidth(virtualColumn.index)}
                     />
                   </div>
                 );

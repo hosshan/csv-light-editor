@@ -3,6 +3,7 @@ import { Toolbar } from './components/layout/Toolbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { CsvTable } from './components/csv/CsvTable';
 import { SaveDialog } from './components/SaveDialog';
+import { SelectionStatistics } from './components/SelectionStatistics';
 import { useCsvStore } from './store/csvStore';
 import { useTauri } from './hooks/useTauri';
 import { Loader2 } from 'lucide-react';
@@ -120,7 +121,10 @@ function App() {
 
           {/* Wrap CsvTable in error boundary */}
           {data ? (
-            <CsvTable />
+            <>
+              <CsvTable />
+              <SelectionStatistics />
+            </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center text-muted-foreground">
