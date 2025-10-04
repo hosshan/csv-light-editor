@@ -250,8 +250,11 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data) return;
 
-        // Store before state for history
-        const beforeData = { ...state.data };
+        // Store before state for history - deep copy rows
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
 
         const newRows = [...state.data.rows];
         if (newRows[cell.row]) {
@@ -362,10 +365,14 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data || !state.clipboard) return;
 
-        // Store before state for history
-        const beforeData = { ...state.data };
+        // Store before state for history - deep copy rows
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
 
-        const newRows = [...state.data.rows];
+        // Create deep copy of rows for modification
+        const newRows = state.data.rows.map(row => [...row]);
         const target = targetCell || state.selectedCell;
 
         if (!target) return;
@@ -421,8 +428,11 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         if (!state.data) return;
 
-        // Store before state for history
-        const beforeData = { ...state.data };
+        // Store before state for history - deep copy rows
+        const beforeData = {
+          ...state.data,
+          rows: state.data.rows.map(row => [...row])
+        };
 
         const newRows = [...state.data.rows];
         const selection = state.selectedCell || state.selectedRange || undefined;

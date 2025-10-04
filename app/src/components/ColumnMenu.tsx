@@ -131,7 +131,6 @@ export const ColumnMenu: React.FC<ColumnMenuProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </>
   );
 };
