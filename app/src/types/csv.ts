@@ -52,6 +52,17 @@ export interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
+export type SortDirection = 'Ascending' | 'Descending';
+
+export interface SortColumn {
+  column_index: number;
+  direction: SortDirection;
+}
+
+export interface SortState {
+  columns: SortColumn[];
+}
+
 export interface HistoryAction {
   type: 'cell_update' | 'range_update' | 'paste' | 'delete' | 'cut' |
         'add_row' | 'delete_row' | 'duplicate_row' |

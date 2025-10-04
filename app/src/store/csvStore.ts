@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { CsvData, CsvCell, CsvSelection, ViewportRange, FilterConfig, SortConfig, HistoryAction } from '../types/csv';
+import type { CsvData, CsvCell, CsvSelection, ViewportRange, FilterConfig, SortConfig, HistoryAction, SortState } from '../types/csv';
 
 interface CsvState {
   // Data state
@@ -30,6 +30,7 @@ interface CsvState {
   // Filter and sort state
   filters: FilterConfig[];
   sorts: SortConfig[];
+  currentSort: SortState;
 
   // History state for Undo/Redo
   history: HistoryAction[];
@@ -61,6 +62,10 @@ interface CsvState {
   addSort: (sort: SortConfig) => void;
   removeSort: (index: number) => void;
   clearSorts: () => void;
+
+  // New sort functionality
+  applySorting: (sortState: SortState) => void;
+  clearSorting: () => void;
 
   // Clipboard actions
   copySelection: () => void;
@@ -126,16 +131,33 @@ export const useCsvStore = create<CsvState>()(
 
       filters: [],
       sorts: [],
+      currentSort: { columns: [] },
 
       history: [],
       historyIndex: -1,
 
       // Actions
-      setData: (data, filePath) => set({
-        data,
-        error: null,
-        currentFilePath: filePath || get().currentFilePath
-      }),
+      setData: async (data, filePath) => {
+        const newFilePath = filePath || get().currentFilePath;
+        set({
+          data,
+          error: null,
+          currentFilePath: newFilePath
+        });
+
+        // Load sort state from metadata if file path is available
+        if (newFilePath) {
+          try {
+            const { tauriAPI } = await import('../hooks/useTauri');
+            const savedSortState = await tauriAPI.loadSortState(newFilePath);
+            if (savedSortState && savedSortState.columns.length > 0) {
+              set({ currentSort: savedSortState });
+            }
+          } catch (error) {
+            console.warn('Failed to load sort state from metadata:', error);
+          }
+        }
+      },
       setCurrentFilePath: (currentFilePath) => set({ currentFilePath }),
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error, isLoading: false }),
@@ -326,6 +348,69 @@ export const useCsvStore = create<CsvState>()(
       },
 
       clearSorts: () => set({ sorts: [] }),
+
+      // New sort functionality with history support
+      applySorting: async (sortState: SortState) => {
+        const state = get();
+        if (!state.data || !state.currentFilePath) return;
+
+        try {
+          // Import tauriAPI here to avoid circular dependencies
+          const { tauriAPI } = await import('../hooks/useTauri');
+
+          const beforeData = {
+            ...state.data,
+            rows: state.data.rows.map(row => [...row])
+          };
+
+          const sortedData = await tauriAPI.sortCsvData(state.data, sortState);
+
+          const historyAction: HistoryAction = {
+            type: 'replace_all',
+            data: {
+              beforeData,
+              afterData: sortedData,
+              description: `Sort by ${sortState.columns.length} column${sortState.columns.length > 1 ? 's' : ''}`
+            },
+            timestamp: Date.now()
+          };
+
+          set({
+            data: sortedData,
+            currentSort: sortState,
+            hasUnsavedChanges: true
+          });
+
+          get().addToHistory(historyAction);
+
+          // Save sort state to metadata
+          try {
+            await tauriAPI.saveSortState(state.currentFilePath, sortState);
+          } catch (error) {
+            console.warn('Failed to save sort state to metadata:', error);
+          }
+        } catch (error) {
+          console.error('Failed to apply sorting:', error);
+          set({ error: 'Failed to apply sorting' });
+        }
+      },
+
+      clearSorting: async () => {
+        const state = get();
+        const emptySortState = { columns: [] };
+
+        set({ currentSort: emptySortState });
+
+        // Save empty sort state to metadata
+        if (state.currentFilePath) {
+          try {
+            const { tauriAPI } = await import('../hooks/useTauri');
+            await tauriAPI.saveSortState(state.currentFilePath, emptySortState);
+          } catch (error) {
+            console.warn('Failed to save empty sort state to metadata:', error);
+          }
+        }
+      },
 
       // Clipboard operations
       copySelection: () => {
@@ -838,7 +923,8 @@ export const useCsvStore = create<CsvState>()(
           endColumn: 10
         },
         columnWidths: {},
-        defaultColumnWidth: 150
+        defaultColumnWidth: 150,
+        currentSort: { columns: [] }
       })
     }),
     { name: 'csv-store' }

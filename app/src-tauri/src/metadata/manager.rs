@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use anyhow::Result;
+use crate::commands::csv::{SortState, SortColumn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,6 +16,8 @@ pub struct CsvMetadata {
     pub encoding: String,
     pub file_size: u64,
     pub last_modified: String,
+    #[serde(default)]
+    pub sort_state: Option<SortState>,
 }
 
 impl CsvMetadata {
@@ -41,6 +44,7 @@ impl CsvMetadata {
             encoding: "UTF-8".to_string(),
             file_size: metadata.len(),
             last_modified,
+            sort_state: None,
         })
     }
 
