@@ -537,6 +537,23 @@ pub struct ReplacePreview {
     pub new_value: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SortDirection {
+    Ascending,
+    Descending,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SortColumn {
+    pub column_index: usize,
+    pub direction: SortDirection,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SortState {
+    pub columns: Vec<SortColumn>,
+}
+
 #[tauri::command]
 pub async fn replace_in_csv(
     mut data: CsvData,
@@ -631,4 +648,121 @@ pub async fn replace_in_csv(
         data: if options.preview_only { None } else { Some(data) },
         preview,
     })
+}
+
+fn compare_values(a: &str, b: &str, direction: &SortDirection) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+
+    // Try to parse as numbers first
+    if let (Ok(num_a), Ok(num_b)) = (a.parse::<f64>(), b.parse::<f64>()) {
+        let cmp = num_a.partial_cmp(&num_b).unwrap_or(Ordering::Equal);
+        return match direction {
+            SortDirection::Ascending => cmp,
+            SortDirection::Descending => cmp.reverse(),
+        };
+    }
+
+    // Try to parse as dates
+    if let (Ok(date_a), Ok(date_b)) = (
+        chrono::NaiveDate::parse_from_str(a, "%Y-%m-%d").or_else(|_| chrono::NaiveDate::parse_from_str(a, "%m/%d/%Y")),
+        chrono::NaiveDate::parse_from_str(b, "%Y-%m-%d").or_else(|_| chrono::NaiveDate::parse_from_str(b, "%m/%d/%Y")),
+    ) {
+        let cmp = date_a.cmp(&date_b);
+        return match direction {
+            SortDirection::Ascending => cmp,
+            SortDirection::Descending => cmp.reverse(),
+        };
+    }
+
+    // Fall back to string comparison
+    let cmp = a.cmp(b);
+    match direction {
+        SortDirection::Ascending => cmp,
+        SortDirection::Descending => cmp.reverse(),
+    }
+}
+
+#[tauri::command]
+pub async fn sort_csv_data(
+    mut data: CsvData,
+    sort_state: SortState,
+) -> Result<CsvData, AppError> {
+    if sort_state.columns.is_empty() {
+        return Ok(data);
+    }
+
+    // Validate column indices
+    for sort_col in &sort_state.columns {
+        if sort_col.column_index >= data.headers.len() {
+            return Err(AppError::new(
+                format!("Invalid column index: {}", sort_col.column_index),
+                "INVALID_COLUMN_INDEX",
+            ));
+        }
+    }
+
+    // Create vector of (original_index, row) tuples for stable sorting
+    let mut rows_with_indices: Vec<(usize, &Vec<String>)> = data.rows
+        .iter()
+        .enumerate()
+        .collect();
+
+    // Sort the rows
+    rows_with_indices.sort_by(|a, b| {
+        for sort_col in &sort_state.columns {
+            let val_a = a.1.get(sort_col.column_index).map(|s| s.as_str()).unwrap_or("");
+            let val_b = b.1.get(sort_col.column_index).map(|s| s.as_str()).unwrap_or("");
+
+            let cmp = compare_values(val_a, val_b, &sort_col.direction);
+            if cmp != std::cmp::Ordering::Equal {
+                return cmp;
+            }
+        }
+
+        // If all sort columns are equal, maintain original order (stable sort)
+        a.0.cmp(&b.0)
+    });
+
+    // Extract the sorted rows
+    data.rows = rows_with_indices
+        .into_iter()
+        .map(|(_, row)| row.clone())
+        .collect();
+
+    Ok(data)
+}
+
+#[tauri::command]
+pub async fn save_sort_state(
+    path: String,
+    sort_state: SortState,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let path = Path::new(&path);
+
+    let mut state = state.lock().await;
+
+    // Load current metadata
+    let mut metadata = state.metadata_manager.load_metadata(path)?;
+
+    // Update sort state
+    metadata.sort_state = Some(sort_state);
+
+    // Save updated metadata
+    state.metadata_manager.save_metadata(path, &metadata)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn load_sort_state(
+    path: String,
+    state: State<'_, AppState>,
+) -> Result<Option<SortState>, AppError> {
+    let path = Path::new(&path);
+
+    let mut state = state.lock().await;
+    let metadata = state.metadata_manager.load_metadata(path)?;
+
+    Ok(metadata.sort_state)
 }
