@@ -4,6 +4,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { CsvTable } from './components/csv/CsvTable';
 import { SaveDialog } from './components/SaveDialog';
 import { SelectionStatistics } from './components/SelectionStatistics';
+import { InlineSearchBar } from './components/InlineSearchBar';
 import { useCsvStore } from './store/csvStore';
 import { useTauri } from './hooks/useTauri';
 import { Loader2 } from 'lucide-react';
@@ -14,6 +15,7 @@ function App() {
   const tauriAPI = useTauri();
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveMode, setSaveMode] = useState<'save' | 'saveAs'>('save');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const handleSave = useCallback(async () => {
     if (!data) return;
@@ -69,6 +71,9 @@ function App() {
         e.preventDefault();
         setSaveMode('saveAs');
         setShowSaveDialog(true);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        setIsSearchOpen(true);
       }
     };
 
@@ -91,10 +96,14 @@ function App() {
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
       {/* Toolbar */}
-      <Toolbar onSave={handleSave} onSaveAs={() => {
-        setSaveMode('saveAs');
-        setShowSaveDialog(true);
-      }} />
+      <Toolbar
+        onSave={handleSave}
+        onSaveAs={() => {
+          setSaveMode('saveAs');
+          setShowSaveDialog(true);
+        }}
+        onOpenSearch={() => setIsSearchOpen(true)}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
@@ -121,10 +130,11 @@ function App() {
 
           {/* Wrap CsvTable in error boundary */}
           {data ? (
-            <>
+            <div className="relative flex-1 flex flex-col">
+              <InlineSearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
               <CsvTable />
               <SelectionStatistics />
-            </>
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center text-muted-foreground">

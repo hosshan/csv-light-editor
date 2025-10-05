@@ -49,7 +49,9 @@ export function CsvTable() {
     updateFilter,
     removeFilter,
     clearFilters,
-    getFilteredData
+    getFilteredData,
+    searchResults,
+    currentSearchIndex
   } = useCsvStore();
 
   const [editValue, setEditValue] = useState('');
@@ -661,16 +663,25 @@ export function CsvTable() {
                   selectedRange.focusRow === virtualRow.index &&
                   selectedRange.focusColumn === virtualColumn.index;
 
+                // Check if cell is in search results
+                const searchResultIndex = searchResults.findIndex(
+                  result => result.row === virtualRow.index && result.column === virtualColumn.index
+                );
+                const isSearchResult = searchResultIndex !== -1;
+                const isCurrentSearchResult = searchResultIndex === currentSearchIndex;
+
                 return (
                   <div
                     key={`${virtualRow.index}-${virtualColumn.index}`}
                     className={cn(
                       'border-r border-b border-border bg-background flex items-center px-2 text-sm cursor-cell transition-colors hover:bg-accent',
                       {
-                        'bg-primary/10 border-primary border-2 z-10': isSelected && !isEditing,
+                        'bg-primary/10 border-primary border-2 z-10': isSelected && !isEditing && !isCurrentSearchResult,
                         'bg-accent border-primary border-2 z-20 ring-2 ring-primary/50': isEditing,
-                        'bg-primary/5': isInRange && !isSelected && !isEditing && !isFocusCell,
-                        'bg-primary/15 border-primary/50 border-2 z-15': isFocusCell && !isEditing,
+                        'bg-primary/5': isInRange && !isSelected && !isEditing && !isFocusCell && !isSearchResult,
+                        'bg-primary/15 border-primary/50 border-2 z-15': isFocusCell && !isEditing && !isCurrentSearchResult,
+                        'bg-yellow-200 border-yellow-400 border-2 z-[5]': isSearchResult && !isCurrentSearchResult && !isEditing,
+                        'bg-orange-300 border-orange-500 border-2 z-[30] ring-2 ring-orange-400': isCurrentSearchResult && !isEditing,
                       }
                     )}
                     style={{

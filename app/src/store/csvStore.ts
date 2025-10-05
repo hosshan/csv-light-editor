@@ -33,6 +33,17 @@ interface CsvState {
   sorts: SortConfig[];
   currentSort: SortState;
 
+  // Search state
+  searchResults: CsvCell[];
+  currentSearchIndex: number;
+  searchQuery: string;
+  searchOptions: {
+    caseSensitive: boolean;
+    wholeWord: boolean;
+    regex: boolean;
+    columnIndex?: number;
+  };
+
   // History state for Undo/Redo
   history: HistoryAction[];
   historyIndex: number;
@@ -105,6 +116,13 @@ interface CsvState {
   getColumnWidth: (columnIndex: number) => number;
   resetColumnWidths: () => void;
 
+  // Search operations
+  setSearchQuery: (query: string, options?: Partial<CsvState['searchOptions']>) => void;
+  performSearch: () => void;
+  clearSearch: () => void;
+  nextSearchResult: () => void;
+  previousSearchResult: () => void;
+
   markSaved: () => void;
   reset: () => void;
 }
@@ -139,6 +157,15 @@ export const useCsvStore = create<CsvState>()(
       filters: [],
       sorts: [],
       currentSort: { columns: [] },
+
+      searchResults: [],
+      currentSearchIndex: -1,
+      searchQuery: '',
+      searchOptions: {
+        caseSensitive: false,
+        wholeWord: false,
+        regex: false,
+      },
 
       history: [],
       historyIndex: -1,
@@ -1014,6 +1041,100 @@ export const useCsvStore = create<CsvState>()(
 
       resetColumnWidths: () => {
         set({ columnWidths: {} });
+      },
+
+      // Search operations
+      setSearchQuery: (query, options) => {
+        set((state) => ({
+          searchQuery: query,
+          searchOptions: options ? { ...state.searchOptions, ...options } : state.searchOptions,
+        }));
+      },
+
+      performSearch: () => {
+        const state = get();
+        const { data, searchQuery, searchOptions } = state;
+
+        if (!data || !searchQuery) {
+          set({ searchResults: [], currentSearchIndex: -1 });
+          return;
+        }
+
+        const results: CsvCell[] = [];
+        const { caseSensitive, wholeWord, regex, columnIndex } = searchOptions;
+
+        // Build search regex if needed
+        let searchRegex: RegExp | null = null;
+        if (regex) {
+          try {
+            searchRegex = new RegExp(searchQuery, caseSensitive ? 'g' : 'gi');
+          } catch (e) {
+            console.error('Invalid regex:', e);
+            return;
+          }
+        }
+
+        // Search through all rows and columns
+        data.rows.forEach((row, rowIndex) => {
+          const columnsToSearch = columnIndex !== undefined ? [columnIndex] : row.map((_, idx) => idx);
+
+          columnsToSearch.forEach((colIdx) => {
+            const value = row[colIdx] || '';
+            let matches = false;
+
+            if (searchRegex) {
+              matches = searchRegex.test(value);
+            } else if (wholeWord) {
+              const searchText = caseSensitive ? searchQuery : searchQuery.toLowerCase();
+              const cellValue = caseSensitive ? value : value.toLowerCase();
+              matches = cellValue.split(/\s+/).some(word => word === searchText);
+            } else {
+              const searchText = caseSensitive ? searchQuery : searchQuery.toLowerCase();
+              const cellValue = caseSensitive ? value : value.toLowerCase();
+              matches = cellValue.includes(searchText);
+            }
+
+            if (matches) {
+              results.push({ row: rowIndex, column: colIdx, value });
+            }
+          });
+        });
+
+        set({
+          searchResults: results,
+          currentSearchIndex: results.length > 0 ? 0 : -1,
+        });
+
+        // Navigate to first result
+        if (results.length > 0) {
+          get().selectCell(results[0]);
+        }
+      },
+
+      clearSearch: () => {
+        set({
+          searchResults: [],
+          currentSearchIndex: -1,
+          searchQuery: '',
+        });
+      },
+
+      nextSearchResult: () => {
+        const { searchResults, currentSearchIndex } = get();
+        if (searchResults.length === 0) return;
+
+        const nextIndex = (currentSearchIndex + 1) % searchResults.length;
+        set({ currentSearchIndex: nextIndex });
+        get().selectCell(searchResults[nextIndex]);
+      },
+
+      previousSearchResult: () => {
+        const { searchResults, currentSearchIndex } = get();
+        if (searchResults.length === 0) return;
+
+        const prevIndex = currentSearchIndex === 0 ? searchResults.length - 1 : currentSearchIndex - 1;
+        set({ currentSearchIndex: prevIndex });
+        get().selectCell(searchResults[prevIndex]);
       },
 
       markSaved: () => set({ hasUnsavedChanges: false }),

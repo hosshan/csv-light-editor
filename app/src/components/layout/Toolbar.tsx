@@ -21,9 +21,10 @@ import { SortMenu } from '../SortMenu';
 interface ToolbarProps {
   onSave?: () => void;
   onSaveAs?: () => void;
+  onOpenSearch?: () => void;
 }
 
-export function Toolbar({ onSave, onSaveAs }: ToolbarProps = {}) {
+export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
   const {
     data,
     currentFilePath,
@@ -148,9 +149,9 @@ export function Toolbar({ onSave, onSaveAs }: ToolbarProps = {}) {
             variant="ghost"
             size="sm"
             disabled={!data}
-            onClick={() => setIsSearchReplaceDialogOpen(true)}
+            onClick={() => onOpenSearch && onOpenSearch()}
             className="flex items-center space-x-1"
-            title="Find & Replace (⌘F)"
+            title="Find (⌘F)"
           >
             <Search className="h-4 w-4" />
             <span>Find</span>
