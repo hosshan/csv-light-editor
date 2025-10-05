@@ -71,7 +71,7 @@ export function InlineSearchBar({ isOpen, onClose }: InlineSearchBarProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="absolute top-0 right-0 z-50 bg-background border border-border rounded-md shadow-lg p-3 m-2 min-w-[400px]">
+    <div className="absolute top-2 right-2 z-50 bg-background border border-border rounded-md shadow-lg p-3 min-w-[400px] pointer-events-auto">
       <div className="flex items-center gap-2 mb-2">
         <div className="flex-1 relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

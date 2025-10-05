@@ -130,11 +130,13 @@ function App() {
 
           {/* Wrap CsvTable in error boundary */}
           {data ? (
-            <div className="relative flex-1 flex flex-col">
-              <InlineSearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-              <CsvTable />
+            <>
+              <div className="relative flex-1 flex flex-col overflow-hidden">
+                <InlineSearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+                <CsvTable />
+              </div>
               <SelectionStatistics />
-            </div>
+            </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center text-muted-foreground">
