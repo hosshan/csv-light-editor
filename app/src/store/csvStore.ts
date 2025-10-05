@@ -122,6 +122,8 @@ interface CsvState {
   clearSearch: () => void;
   nextSearchResult: () => void;
   previousSearchResult: () => void;
+  replaceCurrentResult: (replaceText: string) => void;
+  replaceAllResults: (replaceText: string) => void;
 
   markSaved: () => void;
   reset: () => void;
@@ -1135,6 +1137,78 @@ export const useCsvStore = create<CsvState>()(
         const prevIndex = currentSearchIndex === 0 ? searchResults.length - 1 : currentSearchIndex - 1;
         set({ currentSearchIndex: prevIndex });
         get().selectCell(searchResults[prevIndex]);
+      },
+
+      replaceCurrentResult: (replaceText: string) => {
+        const { searchResults, currentSearchIndex, data } = get();
+        if (!data || searchResults.length === 0 || currentSearchIndex < 0) return;
+
+        const currentResult = searchResults[currentSearchIndex];
+        const { row, column } = currentResult;
+
+        // Save state for undo
+        const beforeData = JSON.parse(JSON.stringify(data));
+
+        // Perform replacement
+        const newData = { ...data };
+        newData.rows = [...data.rows];
+        newData.rows[row] = [...data.rows[row]];
+        newData.rows[row][column] = replaceText;
+
+        // Add to history
+        get().addToHistory({
+          type: 'replace_current',
+          data: {
+            beforeData,
+            afterData: newData,
+            description: 'Replace text',
+          },
+          timestamp: Date.now(),
+        });
+
+        set({
+          data: newData,
+          hasUnsavedChanges: true,
+        });
+
+        // Move to next result
+        get().nextSearchResult();
+      },
+
+      replaceAllResults: (replaceText: string) => {
+        const { searchResults, data } = get();
+        if (!data || searchResults.length === 0) return;
+
+        // Save state for undo
+        const beforeData = JSON.parse(JSON.stringify(data));
+
+        // Perform all replacements
+        const newData = { ...data };
+        newData.rows = data.rows.map(row => [...row]);
+
+        searchResults.forEach(result => {
+          const { row, column } = result;
+          newData.rows[row][column] = replaceText;
+        });
+
+        // Add to history
+        get().addToHistory({
+          type: 'replace_all',
+          data: {
+            beforeData,
+            afterData: newData,
+            description: `Replace all (${searchResults.length} occurrences)`,
+          },
+          timestamp: Date.now(),
+        });
+
+        set({
+          data: newData,
+          hasUnsavedChanges: true,
+        });
+
+        // Clear search after replacing all
+        get().clearSearch();
       },
 
       markSaved: () => set({ hasUnsavedChanges: false }),

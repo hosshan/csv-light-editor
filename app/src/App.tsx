@@ -16,6 +16,7 @@ function App() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveMode, setSaveMode] = useState<'save' | 'saveAs'>('save');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchMode, setSearchMode] = useState<'search' | 'replace'>('search');
 
   const handleSave = useCallback(async () => {
     if (!data) return;
@@ -73,6 +74,11 @@ function App() {
         setShowSaveDialog(true);
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault();
+        setSearchMode('search');
+        setIsSearchOpen(true);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
+        e.preventDefault();
+        setSearchMode('replace');
         setIsSearchOpen(true);
       }
     };
@@ -132,7 +138,11 @@ function App() {
           {data ? (
             <>
               <div className="relative flex-1 flex flex-col overflow-hidden">
-                <InlineSearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+                <InlineSearchBar
+                  isOpen={isSearchOpen}
+                  onClose={() => setIsSearchOpen(false)}
+                  initialMode={searchMode}
+                />
                 <CsvTable />
               </div>
               <SelectionStatistics />

@@ -4,14 +4,15 @@ import { Input } from './ui/input';
 import { Button } from './ui/Button';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
-import { X, ChevronUp, ChevronDown, Search } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, Search, Replace } from 'lucide-react';
 
 interface InlineSearchBarProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMode?: 'search' | 'replace';
 }
 
-export function InlineSearchBar({ isOpen, onClose }: InlineSearchBarProps) {
+export function InlineSearchBar({ isOpen, onClose, initialMode = 'search' }: InlineSearchBarProps) {
   const {
     searchQuery,
     searchResults,
@@ -22,21 +23,26 @@ export function InlineSearchBar({ isOpen, onClose }: InlineSearchBarProps) {
     clearSearch,
     nextSearchResult,
     previousSearchResult,
+    replaceCurrentResult,
+    replaceAllResults,
   } = useCsvStore();
 
+  const [mode, setMode] = useState<'search' | 'replace'>(initialMode);
   const [localQuery, setLocalQuery] = useState(searchQuery);
+  const [replaceText, setReplaceText] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(searchOptions.caseSensitive);
   const [wholeWord, setWholeWord] = useState(searchOptions.wholeWord);
   const [useRegex, setUseRegex] = useState(searchOptions.regex);
 
   useEffect(() => {
     if (isOpen) {
+      setMode(initialMode);
       setLocalQuery(searchQuery);
       setCaseSensitive(searchOptions.caseSensitive);
       setWholeWord(searchOptions.wholeWord);
       setUseRegex(searchOptions.regex);
     }
-  }, [isOpen, searchQuery, searchOptions]);
+  }, [isOpen, searchQuery, searchOptions, initialMode]);
 
   const handleSearch = () => {
     if (!localQuery) return;
@@ -63,16 +69,50 @@ export function InlineSearchBar({ isOpen, onClose }: InlineSearchBarProps) {
     }
   };
 
+  const handleReplaceCurrent = () => {
+    replaceCurrentResult(replaceText);
+  };
+
+  const handleReplaceAll = () => {
+    replaceAllResults(replaceText);
+  };
+
   const handleClose = () => {
     clearSearch();
     setLocalQuery('');
+    setReplaceText('');
     onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="absolute top-2 right-2 z-50 bg-background border border-border rounded-md shadow-lg p-3 min-w-[400px] pointer-events-auto">
+    <div className="absolute top-2 right-2 z-50 bg-background border border-border rounded-md shadow-lg p-3 min-w-[450px] pointer-events-auto">
+      {/* Mode Toggle */}
+      <div className="flex items-center gap-2 mb-2">
+        <Button
+          variant={mode === 'search' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setMode('search')}
+        >
+          <Search className="h-4 w-4 mr-1" />
+          Find
+        </Button>
+        <Button
+          variant={mode === 'replace' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setMode('replace')}
+        >
+          <Replace className="h-4 w-4 mr-1" />
+          Replace
+        </Button>
+        <div className="flex-1" />
+        <Button variant="ghost" size="sm" onClick={handleClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Search Input */}
       <div className="flex items-center gap-2 mb-2">
         <div className="flex-1 relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -111,11 +151,43 @@ export function InlineSearchBar({ isOpen, onClose }: InlineSearchBarProps) {
           >
             <ChevronDown className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleClose}>
-            <X className="h-4 w-4" />
-          </Button>
         </div>
       </div>
+
+      {/* Replace Input (only in replace mode) */}
+      {mode === 'replace' && (
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex-1 relative">
+            <Replace className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={replaceText}
+              onChange={(e) => setReplaceText(e.target.value)}
+              placeholder="Replace with..."
+              className="pl-8"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReplaceCurrent}
+              disabled={searchResults.length === 0}
+              title="Replace current"
+            >
+              Replace
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReplaceAll}
+              disabled={searchResults.length === 0}
+              title="Replace all"
+            >
+              Replace All
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-4 text-sm">
         <div className="flex items-center gap-2">
