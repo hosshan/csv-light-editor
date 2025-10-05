@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCsvStore } from '../store/csvStore';
 import { Input } from './ui/input';
 import { Button } from './ui/Button';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
-import { X, ChevronUp, ChevronDown, Search, Replace } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, Search, Replace, GripVertical } from 'lucide-react';
 
 interface InlineSearchBarProps {
   isOpen: boolean;
@@ -33,6 +33,12 @@ export function InlineSearchBar({ isOpen, onClose, initialMode = 'search' }: Inl
   const [caseSensitive, setCaseSensitive] = useState(searchOptions.caseSensitive);
   const [wholeWord, setWholeWord] = useState(searchOptions.wholeWord);
   const [useRegex, setUseRegex] = useState(searchOptions.regex);
+
+  // Dragging state
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -84,12 +90,76 @@ export function InlineSearchBar({ isOpen, onClose, initialMode = 'search' }: Inl
     onClose();
   };
 
+  // Drag handlers
+  const handleDragStart = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    });
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newX = e.clientX - dragStart.x;
+      const newY = e.clientY - dragStart.y;
+
+      // Constrain to viewport
+      if (panelRef.current) {
+        const rect = panelRef.current.getBoundingClientRect();
+        const maxX = window.innerWidth - rect.width;
+        const maxY = window.innerHeight - rect.height;
+
+        setPosition({
+          x: Math.max(0, Math.min(newX, maxX)),
+          y: Math.max(0, Math.min(newY, maxY)),
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragStart]);
+
+  // Reset position when opening
+  useEffect(() => {
+    if (isOpen) {
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
+  const style: React.CSSProperties = position.x === 0 && position.y === 0
+    ? { top: '0.5rem', right: '0.5rem' }
+    : { top: `${position.y}px`, left: `${position.x}px` };
+
   return (
-    <div className="absolute top-2 right-2 z-50 bg-background border border-border rounded-md shadow-lg p-3 min-w-[450px] pointer-events-auto">
-      {/* Mode Toggle */}
+    <div
+      ref={panelRef}
+      className="absolute z-50 bg-background border border-border rounded-md shadow-lg p-3 min-w-[450px] pointer-events-auto"
+      style={style}
+    >
+      {/* Drag Handle and Mode Toggle */}
       <div className="flex items-center gap-2 mb-2">
+        <div
+          className="cursor-move p-1 hover:bg-accent rounded"
+          onMouseDown={handleDragStart}
+          title="Drag to move"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
         <Button
           variant={mode === 'search' ? 'default' : 'outline'}
           size="sm"
