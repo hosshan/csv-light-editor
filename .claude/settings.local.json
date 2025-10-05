@@ -1,12 +1,23 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit:*)",
       "Bash(npm run:*)",
       "Bash(pnpm build:*)",
-      "Bash(git add:*)",
       "Bash(pnpm tauri:*)",
-      "Bash(pnpm install:*)"
+      "Bash(pnpm install:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr review:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr comment:*)"
     ],
     "deny": [],
     "ask": []
