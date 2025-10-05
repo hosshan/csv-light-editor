@@ -59,12 +59,13 @@ export function InlineSearchBar({ isOpen, onClose }: InlineSearchBarProps) {
         }
       }
     } else if (e.key === 'Escape') {
-      onClose();
+      handleClose();
     }
   };
 
   const handleClose = () => {
     clearSearch();
+    setLocalQuery('');
     onClose();
   };
 
