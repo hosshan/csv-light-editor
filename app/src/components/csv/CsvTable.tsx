@@ -663,12 +663,13 @@ export function CsvTable() {
                   selectedRange.focusRow === virtualRow.index &&
                   selectedRange.focusColumn === virtualColumn.index;
 
-                // Check if cell is in search results
-                const searchResultIndex = searchResults.findIndex(
+                // Check if cell is in search results (only if there are results)
+                const hasSearchResults = searchResults.length > 0;
+                const searchResultIndex = hasSearchResults ? searchResults.findIndex(
                   result => result.row === virtualRow.index && result.column === virtualColumn.index
-                );
+                ) : -1;
                 const isSearchResult = searchResultIndex !== -1;
-                const isCurrentSearchResult = searchResultIndex === currentSearchIndex;
+                const isCurrentSearchResult = hasSearchResults && searchResultIndex === currentSearchIndex;
 
                 return (
                   <div

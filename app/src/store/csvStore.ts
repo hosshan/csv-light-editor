@@ -1055,7 +1055,7 @@ export const useCsvStore = create<CsvState>()(
         const state = get();
         const { data, searchQuery, searchOptions } = state;
 
-        if (!data || !searchQuery) {
+        if (!data || !searchQuery || searchQuery.trim() === '') {
           set({ searchResults: [], currentSearchIndex: -1 });
           return;
         }
