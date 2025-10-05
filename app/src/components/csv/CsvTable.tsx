@@ -5,6 +5,9 @@ import { cn } from '../../lib/utils';
 import { ColumnMenu } from '../ColumnMenu';
 import { RowMenu } from '../RowMenu';
 import { ColumnResizeHandle } from './ColumnResizeHandle';
+import { DragHandle } from './DragHandle';
+import { DropZoneIndicator } from './DropZoneIndicator';
+import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import styles from './CsvTable.module.css';
 
 export function CsvTable() {
@@ -37,13 +40,26 @@ export function CsvTable() {
     renameColumn,
     setColumnWidth,
     getColumnWidth,
-    columnWidths
+    columnWidths,
+    moveRow,
+    moveColumn
   } = useCsvStore();
 
   const [editValue, setEditValue] = useState('');
 
   const parentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+
+  // Drag and drop functionality
+  const { dragState, handlers } = useDragAndDrop({
+    onMove: (fromIndex: number, toIndex: number, type: 'row' | 'column') => {
+      if (type === 'row') {
+        moveRow(fromIndex, toIndex);
+      } else {
+        moveColumn(fromIndex, toIndex);
+      }
+    },
+  });
 
   // Virtual scrolling for rows with performance optimizations
   const rowVirtualizer = useVirtualizer({
@@ -470,11 +486,27 @@ export function CsvTable() {
                       transform: `translateX(${virtualColumn.start}px)`,
                     }}
                     onMouseDown={(e) => {
+                      // Don't handle column selection if clicking on drag handle
+                      if ((e.target as Element).closest('[draggable="true"]')) {
+                        return;
+                      }
                       e.preventDefault();
                       e.stopPropagation();
                       handleColumnHeaderClick(virtualColumn.index, e);
                     }}
+                    onDragOver={(e) => handlers.onDragOver(virtualColumn.index, e)}
+                    onDragLeave={handlers.onDragLeave}
+                    onDragEnter={(e) => e.preventDefault()}
                   >
+                    <DragHandle
+                      type="column"
+                      index={virtualColumn.index}
+                      isDragging={dragState.draggedIndex === virtualColumn.index && dragState.draggedType === 'column'}
+                      isDropTarget={dragState.dropTargetIndex === virtualColumn.index && dragState.draggedType === 'column'}
+                      onDragStart={handlers.onDragStart}
+                      onDragEnd={handlers.onDragEnd}
+                      className="w-4 h-full mr-1"
+                    />
                     <span className="flex-1 truncate">
                       {data.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
                     </span>
@@ -495,6 +527,11 @@ export function CsvTable() {
                       columnIndex={virtualColumn.index}
                       onResize={setColumnWidth}
                       currentWidth={getColumnWidth(virtualColumn.index)}
+                    />
+                    <DropZoneIndicator
+                      type="column"
+                      position="before"
+                      isVisible={dragState.dropTargetIndex === virtualColumn.index && dragState.draggedType === 'column'}
                     />
                   </div>
                 );
@@ -554,12 +591,35 @@ export function CsvTable() {
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                   onMouseDown={(e) => {
+                    // Don't handle row selection if clicking on drag handle
+                    if ((e.target as Element).closest('[draggable="true"]')) {
+                      return;
+                    }
                     e.preventDefault();
                     e.stopPropagation();
                     handleRowHeaderClick(virtualRow.index, e);
                   }}
+                  onDragOver={(e) => handlers.onDragOver(virtualRow.index, e)}
+                  onDragLeave={handlers.onDragLeave}
+                  onDragEnter={(e) => e.preventDefault()}
                 >
-                  {virtualRow.index + 1}
+                  <DragHandle
+                    type="row"
+                    index={virtualRow.index}
+                    isDragging={dragState.draggedIndex === virtualRow.index && dragState.draggedType === 'row'}
+                    isDropTarget={dragState.dropTargetIndex === virtualRow.index && dragState.draggedType === 'row'}
+                    onDragStart={handlers.onDragStart}
+                    onDragEnd={handlers.onDragEnd}
+                    className="w-3 h-4 mb-1"
+                  />
+                  <span className="text-xs">
+                    {virtualRow.index + 1}
+                  </span>
+                  <DropZoneIndicator
+                    type="row"
+                    position="before"
+                    isVisible={dragState.dropTargetIndex === virtualRow.index && dragState.draggedType === 'row'}
+                  />
                 </div>
               </RowMenu>
 

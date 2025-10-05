@@ -42,6 +42,8 @@ fn main() {
             commands::csv::sort_csv_data,
             commands::csv::save_sort_state,
             commands::csv::load_sort_state,
+            commands::csv::move_row,
+            commands::csv::move_column,
             commands::settings::get_import_export_settings,
             commands::settings::update_import_export_settings,
             commands::settings::reset_import_export_settings,
