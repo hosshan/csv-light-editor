@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { CsvData, CsvCell, CsvSelection, ViewportRange, FilterConfig, SortConfig, HistoryAction, SortState } from '../types/csv';
+import { applyFilter } from '../utils/filtering';
 
 interface CsvState {
   // Data state
@@ -55,9 +56,11 @@ interface CsvState {
   stopEditing: () => void;
   updateCell: (cell: CsvCell, value: string) => void;
 
-  addFilter: (filter: FilterConfig) => void;
-  removeFilter: (index: number) => void;
+  addFilter: () => void;
+  updateFilter: (id: string, updates: Partial<FilterConfig>) => void;
+  removeFilter: (id: string) => void;
   clearFilters: () => void;
+  getFilteredData: () => CsvData | null;
 
   addSort: (sort: SortConfig) => void;
   removeSort: (index: number) => void;
@@ -318,26 +321,62 @@ export const useCsvStore = create<CsvState>()(
         get().addToHistory(historyAction);
       },
 
-      addFilter: (filter) => {
+      addFilter: () => {
         const state = get();
-        const existingIndex = state.filters.findIndex(f => f.column === filter.column);
-
-        if (existingIndex >= 0) {
-          const newFilters = [...state.filters];
-          newFilters[existingIndex] = filter;
-          set({ filters: newFilters });
-        } else {
-          set({ filters: [...state.filters, filter] });
-        }
+        const newFilter: FilterConfig = {
+          id: `filter_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          column: 0,
+          operator: 'contains',
+          value: '',
+          dataType: 'text',
+          isActive: true,
+        };
+        set({ filters: [...state.filters, newFilter] });
       },
 
-      removeFilter: (index) => {
+      updateFilter: (id: string, updates: Partial<FilterConfig>) => {
         const state = get();
-        const newFilters = state.filters.filter((_, i) => i !== index);
+        const newFilters = state.filters.map(filter =>
+          filter.id === id ? { ...filter, ...updates } : filter
+        );
+        set({ filters: newFilters });
+      },
+
+      removeFilter: (id: string) => {
+        const state = get();
+        const newFilters = state.filters.filter(filter => filter.id !== id);
         set({ filters: newFilters });
       },
 
       clearFilters: () => set({ filters: [] }),
+
+      getFilteredData: () => {
+        const state = get();
+        if (!state.data || state.filters.length === 0) {
+          return state.data;
+        }
+
+        const activeFilters = state.filters.filter(f => f.isActive);
+        if (activeFilters.length === 0) {
+          return state.data;
+        }
+
+        const filteredRows = state.data.rows.filter(row => {
+          return activeFilters.every(filter => {
+            const cellValue = row[filter.column] || '';
+            return applyFilter(cellValue, filter);
+          });
+        });
+
+        return {
+          ...state.data,
+          rows: filteredRows,
+          metadata: {
+            ...state.data.metadata,
+            rowCount: filteredRows.length,
+          }
+        };
+      },
 
       addSort: (sort) => {
         const state = get();
