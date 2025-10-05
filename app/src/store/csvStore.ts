@@ -1140,20 +1140,53 @@ export const useCsvStore = create<CsvState>()(
       },
 
       replaceCurrentResult: (replaceText: string) => {
-        const { searchResults, currentSearchIndex, data } = get();
+        const { searchResults, currentSearchIndex, data, searchQuery, searchOptions } = get();
         if (!data || searchResults.length === 0 || currentSearchIndex < 0) return;
 
         const currentResult = searchResults[currentSearchIndex];
-        const { row, column } = currentResult;
+        const { row, column, value } = currentResult;
 
         // Save state for undo
         const beforeData = JSON.parse(JSON.stringify(data));
 
-        // Perform replacement
+        // Perform replacement - replace only the matched part
         const newData = { ...data };
         newData.rows = [...data.rows];
         newData.rows[row] = [...data.rows[row]];
-        newData.rows[row][column] = replaceText;
+
+        let newValue = value;
+        const { caseSensitive, wholeWord, regex } = searchOptions;
+
+        if (regex) {
+          // Use regex replacement
+          try {
+            const re = new RegExp(searchQuery, caseSensitive ? 'g' : 'gi');
+            newValue = value.replace(re, replaceText);
+          } catch (e) {
+            console.error('Invalid regex:', e);
+            return;
+          }
+        } else if (wholeWord) {
+          // Replace whole word only
+          const words = value.split(/(\s+)/); // Keep whitespace
+          const searchText = caseSensitive ? searchQuery : searchQuery.toLowerCase();
+          newValue = words.map(word => {
+            const compareWord = caseSensitive ? word : word.toLowerCase();
+            return compareWord === searchText ? replaceText : word;
+          }).join('');
+        } else {
+          // Simple partial match replacement
+          if (caseSensitive) {
+            newValue = value.replace(searchQuery, replaceText);
+          } else {
+            const index = value.toLowerCase().indexOf(searchQuery.toLowerCase());
+            if (index !== -1) {
+              newValue = value.substring(0, index) + replaceText + value.substring(index + searchQuery.length);
+            }
+          }
+        }
+
+        newData.rows[row][column] = newValue;
 
         // Add to history
         get().addToHistory({
@@ -1176,7 +1209,7 @@ export const useCsvStore = create<CsvState>()(
       },
 
       replaceAllResults: (replaceText: string) => {
-        const { searchResults, data } = get();
+        const { searchResults, data, searchQuery, searchOptions } = get();
         if (!data || searchResults.length === 0) return;
 
         // Save state for undo
@@ -1186,9 +1219,42 @@ export const useCsvStore = create<CsvState>()(
         const newData = { ...data };
         newData.rows = data.rows.map(row => [...row]);
 
+        const { caseSensitive, wholeWord, regex } = searchOptions;
+
         searchResults.forEach(result => {
-          const { row, column } = result;
-          newData.rows[row][column] = replaceText;
+          const { row, column, value } = result;
+          let newValue = value;
+
+          if (regex) {
+            // Use regex replacement
+            try {
+              const re = new RegExp(searchQuery, caseSensitive ? 'g' : 'gi');
+              newValue = value.replace(re, replaceText);
+            } catch (e) {
+              console.error('Invalid regex:', e);
+              return;
+            }
+          } else if (wholeWord) {
+            // Replace whole word only
+            const words = value.split(/(\s+)/); // Keep whitespace
+            const searchText = caseSensitive ? searchQuery : searchQuery.toLowerCase();
+            newValue = words.map(word => {
+              const compareWord = caseSensitive ? word : word.toLowerCase();
+              return compareWord === searchText ? replaceText : word;
+            }).join('');
+          } else {
+            // Simple partial match replacement - replace first occurrence
+            if (caseSensitive) {
+              newValue = value.replace(searchQuery, replaceText);
+            } else {
+              const index = value.toLowerCase().indexOf(searchQuery.toLowerCase());
+              if (index !== -1) {
+                newValue = value.substring(0, index) + replaceText + value.substring(index + searchQuery.length);
+              }
+            }
+          }
+
+          newData.rows[row][column] = newValue;
         });
 
         // Add to history
