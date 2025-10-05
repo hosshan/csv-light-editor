@@ -67,6 +67,10 @@ interface CsvState {
   applySorting: (sortState: SortState) => void;
   clearSorting: () => void;
 
+  // Row and column reordering
+  moveRow: (fromIndex: number, toIndex: number) => void;
+  moveColumn: (fromIndex: number, toIndex: number) => void;
+
   // Clipboard actions
   copySelection: () => void;
   cutSelection: () => void;
@@ -409,6 +413,79 @@ export const useCsvStore = create<CsvState>()(
           } catch (error) {
             console.warn('Failed to save empty sort state to metadata:', error);
           }
+        }
+      },
+
+      // Row and column reordering with history support
+      moveRow: async (fromIndex: number, toIndex: number) => {
+        const state = get();
+        if (!state.data) return;
+
+        try {
+          const { tauriAPI } = await import('../hooks/useTauri');
+
+          const beforeData = {
+            ...state.data,
+            rows: state.data.rows.map(row => [...row])
+          };
+
+          const newData = await tauriAPI.moveRow(state.data, fromIndex, toIndex);
+
+          const historyAction: HistoryAction = {
+            type: 'replace_all',
+            data: {
+              beforeData,
+              afterData: newData,
+              description: `Move row from position ${fromIndex + 1} to ${toIndex + 1}`
+            },
+            timestamp: Date.now()
+          };
+
+          set({
+            data: newData,
+            hasUnsavedChanges: true
+          });
+
+          get().addToHistory(historyAction);
+        } catch (error) {
+          console.error('Failed to move row:', error);
+          set({ error: 'Failed to move row' });
+        }
+      },
+
+      moveColumn: async (fromIndex: number, toIndex: number) => {
+        const state = get();
+        if (!state.data) return;
+
+        try {
+          const { tauriAPI } = await import('../hooks/useTauri');
+
+          const beforeData = {
+            ...state.data,
+            rows: state.data.rows.map(row => [...row])
+          };
+
+          const newData = await tauriAPI.moveColumn(state.data, fromIndex, toIndex);
+
+          const historyAction: HistoryAction = {
+            type: 'replace_all',
+            data: {
+              beforeData,
+              afterData: newData,
+              description: `Move column from position ${fromIndex + 1} to ${toIndex + 1}`
+            },
+            timestamp: Date.now()
+          };
+
+          set({
+            data: newData,
+            hasUnsavedChanges: true
+          });
+
+          get().addToHistory(historyAction);
+        } catch (error) {
+          console.error('Failed to move column:', error);
+          set({ error: 'Failed to move column' });
         }
       },
 

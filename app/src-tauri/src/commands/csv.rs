@@ -766,3 +766,82 @@ pub async fn load_sort_state(
 
     Ok(metadata.sort_state)
 }
+
+#[tauri::command]
+pub async fn move_row(
+    mut data: CsvData,
+    from_index: usize,
+    to_index: usize,
+) -> Result<CsvData, AppError> {
+    if from_index >= data.rows.len() || to_index > data.rows.len() {
+        return Err(AppError::new(
+            "Invalid row index for move operation".to_string(),
+            "INVALID_ROW_INDEX",
+        ));
+    }
+
+    if from_index == to_index {
+        return Ok(data);
+    }
+
+    // Remove the row from its current position
+    let row_to_move = data.rows.remove(from_index);
+
+    // Calculate the new insertion index
+    let insert_index = if to_index > from_index {
+        to_index - 1
+    } else {
+        to_index
+    };
+
+    // Insert the row at the new position
+    data.rows.insert(insert_index, row_to_move);
+
+    Ok(data)
+}
+
+#[tauri::command]
+pub async fn move_column(
+    mut data: CsvData,
+    from_index: usize,
+    to_index: usize,
+) -> Result<CsvData, AppError> {
+    if from_index >= data.headers.len() || to_index > data.headers.len() {
+        return Err(AppError::new(
+            "Invalid column index for move operation".to_string(),
+            "INVALID_COLUMN_INDEX",
+        ));
+    }
+
+    if from_index == to_index {
+        return Ok(data);
+    }
+
+    // Calculate the new insertion index
+    let insert_index = if to_index > from_index {
+        to_index - 1
+    } else {
+        to_index
+    };
+
+    // Move the header
+    let header_to_move = data.headers.remove(from_index);
+    data.headers.insert(insert_index, header_to_move);
+
+    // Move the data in all rows
+    for row in &mut data.rows {
+        if from_index < row.len() {
+            let cell_to_move = row.remove(from_index);
+            // Ensure the row has enough columns
+            while row.len() <= insert_index {
+                row.push(String::new());
+            }
+            row.insert(insert_index, cell_to_move);
+        }
+    }
+
+    // Update metadata
+    data.metadata.column_count = data.headers.len();
+
+    Ok(data)
+}

@@ -167,6 +167,24 @@ class TauriAPI {
       return null;
     }
   }
+
+  async moveRow(data: CsvData, fromIndex: number, toIndex: number): Promise<CsvData> {
+    try {
+      return await invoke<CsvData>('move_row', { data, fromIndex, toIndex });
+    } catch (error) {
+      console.error('Failed to move row:', error);
+      throw new Error(`Failed to move row: ${error}`);
+    }
+  }
+
+  async moveColumn(data: CsvData, fromIndex: number, toIndex: number): Promise<CsvData> {
+    try {
+      return await invoke<CsvData>('move_column', { data, fromIndex, toIndex });
+    } catch (error) {
+      console.error('Failed to move column:', error);
+      throw new Error(`Failed to move column: ${error}`);
+    }
+  }
 }
 
 export const tauriAPI = new TauriAPI();
