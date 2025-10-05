@@ -7,12 +7,14 @@ import { RowMenu } from '../RowMenu';
 import { ColumnResizeHandle } from './ColumnResizeHandle';
 import { DragHandle } from './DragHandle';
 import { DropZoneIndicator } from './DropZoneIndicator';
+import { FilterBar } from '../filtering/FilterBar';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import styles from './CsvTable.module.css';
 
 export function CsvTable() {
   const {
     data,
+    filters,
     selectedCell,
     selectedRange,
     editingCell,
@@ -42,13 +44,21 @@ export function CsvTable() {
     getColumnWidth,
     columnWidths,
     moveRow,
-    moveColumn
+    moveColumn,
+    addFilter,
+    updateFilter,
+    removeFilter,
+    clearFilters,
+    getFilteredData
   } = useCsvStore();
 
   const [editValue, setEditValue] = useState('');
 
   const parentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+
+  // Use filtered data for display
+  const displayData = getFilteredData() || data;
 
   // Drag and drop functionality
   const { dragState, handlers } = useDragAndDrop({
@@ -63,7 +73,7 @@ export function CsvTable() {
 
   // Virtual scrolling for rows with performance optimizations
   const rowVirtualizer = useVirtualizer({
-    count: data?.rows.length || 0,
+    count: displayData?.rows.length || 0,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 35,
     overscan: 15, // Increased overscan for smoother scrolling
@@ -76,7 +86,7 @@ export function CsvTable() {
 
   // Virtual scrolling for columns with performance optimizations
   const columnVirtualizer = useVirtualizer({
-    count: data?.headers.length || 0,
+    count: displayData?.headers.length || 0,
     getScrollElement: () => parentRef.current,
     estimateSize: (index) => getColumnWidth(index),
     overscan: 8, // Increased overscan for horizontal scrolling
@@ -433,6 +443,16 @@ export function CsvTable() {
 
   return (
     <div className="flex-1 flex flex-col bg-background relative overflow-hidden">
+      {/* Filter Bar */}
+      <FilterBar
+        filters={filters}
+        headers={data?.headers || []}
+        onAddFilter={addFilter}
+        onUpdateFilter={updateFilter}
+        onRemoveFilter={removeFilter}
+        onClearAll={clearFilters}
+      />
+
       {/* Column Headers */}
       <div className="sticky top-0 z-10 bg-muted border-b border-border shrink-0 overflow-hidden">
         <div className="flex">
@@ -508,11 +528,11 @@ export function CsvTable() {
                       className="w-4 h-full mr-1"
                     />
                     <span className="flex-1 truncate">
-                      {data.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
+                      {displayData?.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
                     </span>
                     <ColumnMenu
                       columnIndex={virtualColumn.index}
-                      columnName={data.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
+                      columnName={displayData?.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
                       onAddColumn={(position) => {
                         addColumn(position, virtualColumn.index);
                       }}
@@ -625,7 +645,7 @@ export function CsvTable() {
 
               {/* Data cells */}
               {columnVirtualizer.getVirtualItems().map((virtualColumn) => {
-                const cellValue = data.rows[virtualRow.index]?.[virtualColumn.index] || '';
+                const cellValue = displayData?.rows[virtualRow.index]?.[virtualColumn.index] || '';
                 const isSelected = selectedCell?.row === virtualRow.index && selectedCell?.column === virtualColumn.index;
                 const isEditing = editingCell?.row === virtualRow.index && editingCell?.column === virtualColumn.index;
 

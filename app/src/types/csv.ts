@@ -42,9 +42,15 @@ export interface ViewportRange {
 }
 
 export interface FilterConfig {
+  id: string;
   column: number;
-  operator: 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'isEmpty' | 'isNotEmpty';
+  operator: 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'isEmpty' | 'isNotEmpty' |
+           'greater' | 'less' | 'greaterOrEqual' | 'lessOrEqual' | 'between' |
+           'dateAfter' | 'dateBefore' | 'dateRange' | 'regex';
   value: string;
+  value2?: string; // For 'between' and 'dateRange' operators
+  dataType?: 'text' | 'number' | 'date';
+  isActive: boolean;
 }
 
 export interface SortConfig {
