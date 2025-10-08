@@ -51,7 +51,8 @@ export function CsvTable() {
     clearFilters,
     getFilteredData,
     searchResults,
-    currentSearchIndex
+    currentSearchIndex,
+    setScrollToCell
   } = useCsvStore();
 
   const [editValue, setEditValue] = useState('');
@@ -135,6 +136,30 @@ export function CsvTable() {
       setEditValue(cellValue);
     }
   }, [editingCell, data]);
+
+  // Register scroll callback for search navigation
+  useEffect(() => {
+    const scrollCallback = (row: number, column: number) => {
+      // Scroll to row
+      rowVirtualizer.scrollToIndex(row, {
+        align: 'center',
+        behavior: 'smooth',
+      });
+
+      // Scroll to column
+      columnVirtualizer.scrollToIndex(column, {
+        align: 'center',
+        behavior: 'smooth',
+      });
+    };
+
+    setScrollToCell(scrollCallback);
+
+    // Cleanup: unregister callback on unmount
+    return () => {
+      setScrollToCell(null);
+    };
+  }, [rowVirtualizer, columnVirtualizer, setScrollToCell]);
 
   const handleCellClick = (row: number, column: number, event?: React.MouseEvent) => {
     if (!data) return;

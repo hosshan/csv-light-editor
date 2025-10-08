@@ -43,6 +43,7 @@ interface CsvState {
     regex: boolean;
     columnIndex?: number;
   };
+  scrollToCell: ((row: number, column: number) => void) | null;
 
   // History state for Undo/Redo
   history: HistoryAction[];
@@ -124,6 +125,7 @@ interface CsvState {
   previousSearchResult: () => void;
   replaceCurrentResult: (replaceText: string) => void;
   replaceAllResults: (replaceText: string) => void;
+  setScrollToCell: (callback: ((row: number, column: number) => void) | null) => void;
 
   markSaved: () => void;
   reset: () => void;
@@ -168,6 +170,7 @@ export const useCsvStore = create<CsvState>()(
         wholeWord: false,
         regex: false,
       },
+      scrollToCell: null,
 
       history: [],
       historyIndex: -1,
@@ -1109,7 +1112,14 @@ export const useCsvStore = create<CsvState>()(
 
         // Navigate to first result
         if (results.length > 0) {
-          get().selectCell(results[0]);
+          const firstResult = results[0];
+          get().selectCell(firstResult);
+
+          // Scroll to the first result if callback is registered
+          const { scrollToCell } = get();
+          if (scrollToCell) {
+            scrollToCell(firstResult.row, firstResult.column);
+          }
         }
       },
 
@@ -1122,21 +1132,33 @@ export const useCsvStore = create<CsvState>()(
       },
 
       nextSearchResult: () => {
-        const { searchResults, currentSearchIndex } = get();
+        const { searchResults, currentSearchIndex, scrollToCell } = get();
         if (searchResults.length === 0) return;
 
         const nextIndex = (currentSearchIndex + 1) % searchResults.length;
         set({ currentSearchIndex: nextIndex });
-        get().selectCell(searchResults[nextIndex]);
+        const nextResult = searchResults[nextIndex];
+        get().selectCell(nextResult);
+
+        // Scroll to the cell if callback is registered
+        if (scrollToCell) {
+          scrollToCell(nextResult.row, nextResult.column);
+        }
       },
 
       previousSearchResult: () => {
-        const { searchResults, currentSearchIndex } = get();
+        const { searchResults, currentSearchIndex, scrollToCell } = get();
         if (searchResults.length === 0) return;
 
         const prevIndex = currentSearchIndex === 0 ? searchResults.length - 1 : currentSearchIndex - 1;
         set({ currentSearchIndex: prevIndex });
-        get().selectCell(searchResults[prevIndex]);
+        const prevResult = searchResults[prevIndex];
+        get().selectCell(prevResult);
+
+        // Scroll to the cell if callback is registered
+        if (scrollToCell) {
+          scrollToCell(prevResult.row, prevResult.column);
+        }
       },
 
       replaceCurrentResult: (replaceText: string) => {
@@ -1276,6 +1298,8 @@ export const useCsvStore = create<CsvState>()(
         // Clear search after replacing all
         get().clearSearch();
       },
+
+      setScrollToCell: (callback) => set({ scrollToCell: callback }),
 
       markSaved: () => set({ hasUnsavedChanges: false }),
 
