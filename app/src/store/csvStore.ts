@@ -745,6 +745,13 @@ export const useCsvStore = create<CsvState>()(
             historyIndex: state.historyIndex - 1,
             hasUnsavedChanges: true
           });
+
+          // Re-run search if there's an active search query
+          if (state.searchQuery && state.searchQuery.trim() !== '') {
+            setTimeout(() => {
+              get().performSearch();
+            }, 0);
+          }
         }
       },
 
@@ -759,6 +766,13 @@ export const useCsvStore = create<CsvState>()(
             historyIndex: state.historyIndex + 1,
             hasUnsavedChanges: true
           });
+
+          // Re-run search if there's an active search query
+          if (state.searchQuery && state.searchQuery.trim() !== '') {
+            setTimeout(() => {
+              get().performSearch();
+            }, 0);
+          }
         }
       },
 
