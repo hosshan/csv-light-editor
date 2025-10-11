@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Replace, Loader2, AlertCircle } from 'lucide-react';
+import { Search, Replace, Loader2, AlertCircle, History, Download, Trash2 } from 'lucide-react';
 import type { CsvData } from '@/types/csv';
 
 interface SearchReplaceProps {
@@ -54,6 +54,17 @@ interface ReplaceResult {
   preview: ReplacePreview[];
 }
 
+interface SearchHistoryItem {
+  id: string;
+  searchText: string;
+  replaceText?: string;
+  caseSensitive: boolean;
+  wholeWord: boolean;
+  useRegex: boolean;
+  selectedColumn: string;
+  timestamp: number;
+}
+
 export const SearchReplace: React.FC<SearchReplaceProps> = ({
   isOpen,
   onClose,
@@ -73,6 +84,109 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
   const [replacePreview, setReplacePreview] = useState<ReplacePreview[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('find');
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [selectedReplacements, setSelectedReplacements] = useState<Set<number>>(new Set());
+
+  // Load search history from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('csv-search-history');
+    if (saved) {
+      try {
+        setSearchHistory(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load search history:', e);
+      }
+    }
+  }, []);
+
+  // Save to history
+  const saveToHistory = (includeReplace = false) => {
+    const historyItem: SearchHistoryItem = {
+      id: Date.now().toString(),
+      searchText,
+      replaceText: includeReplace ? replaceText : undefined,
+      caseSensitive,
+      wholeWord,
+      useRegex,
+      selectedColumn,
+      timestamp: Date.now(),
+    };
+
+    const newHistory = [historyItem, ...searchHistory.filter(h => h.searchText !== searchText)].slice(0, 50);
+    setSearchHistory(newHistory);
+    localStorage.setItem('csv-search-history', JSON.stringify(newHistory));
+  };
+
+  // Load from history
+  const loadFromHistory = (item: SearchHistoryItem) => {
+    setSearchText(item.searchText);
+    if (item.replaceText !== undefined) {
+      setReplaceText(item.replaceText);
+    }
+    setCaseSensitive(item.caseSensitive);
+    setWholeWord(item.wholeWord);
+    setUseRegex(item.useRegex);
+    setSelectedColumn(item.selectedColumn);
+    setShowHistory(false);
+  };
+
+  // Delete history item
+  const deleteHistoryItem = (id: string) => {
+    const newHistory = searchHistory.filter(h => h.id !== id);
+    setSearchHistory(newHistory);
+    localStorage.setItem('csv-search-history', JSON.stringify(newHistory));
+  };
+
+  // Clear all history
+  const clearHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem('csv-search-history');
+    setShowHistory(false);
+  };
+
+  // Export search results
+  const exportResults = async (format: 'csv' | 'json') => {
+    if (searchResults.length === 0) {
+      setError('No results to export');
+      return;
+    }
+
+    try {
+      const data = searchResults.map(r => ({
+        row: r.row_index + 1,
+        column: csvData.headers[r.column_index],
+        value: r.value,
+        context: r.context,
+      }));
+
+      let content: string;
+      let filename: string;
+
+      if (format === 'json') {
+        content = JSON.stringify(data, null, 2);
+        filename = `search-results-${Date.now()}.json`;
+      } else {
+        const headers = ['Row', 'Column', 'Value', 'Context'];
+        const rows = data.map(d => [d.row, d.column, d.value, d.context]);
+        content = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+        filename = `search-results-${Date.now()}.csv`;
+      }
+
+      // Create download link
+      const blob = new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setError(`Exported ${searchResults.length} result(s) to ${filename}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchText) {
@@ -101,6 +215,8 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
       setSearchResults(results);
       if (results.length === 0) {
         setError('No matches found');
+      } else {
+        saveToHistory(false);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
@@ -138,11 +254,55 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
       });
 
       setReplacePreview(result.preview);
+      setSelectedReplacements(new Set(result.preview.map((_, idx) => idx)));
       if (result.preview.length === 0) {
         setError('No matches found to replace');
+      } else {
+        saveToHistory(true);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Replace preview failed');
+    } finally {
+      setIsReplacing(false);
+    }
+  };
+
+  const handleReplaceSelected = async () => {
+    if (replacePreview.length === 0) {
+      setError('Please preview replacements first');
+      return;
+    }
+
+    if (selectedReplacements.size === 0) {
+      setError('Please select at least one replacement');
+      return;
+    }
+
+    setIsReplacing(true);
+    setError(null);
+
+    try {
+      let updatedData = { ...csvData };
+      let replacedCount = 0;
+
+      // Apply only selected replacements
+      const sortedIndices = Array.from(selectedReplacements).sort((a, b) => b - a);
+      for (const idx of sortedIndices) {
+        const preview = replacePreview[idx];
+        if (preview && updatedData.rows[preview.row_index]) {
+          updatedData.rows[preview.row_index][preview.column_index] = preview.new_value;
+          replacedCount++;
+        }
+      }
+
+      if (onDataChange) {
+        onDataChange(updatedData);
+        setError(`Successfully replaced ${replacedCount} occurrence(s)`);
+        setReplacePreview([]);
+        setSelectedReplacements(new Set());
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Replace failed');
     } finally {
       setIsReplacing(false);
     }
@@ -184,11 +344,30 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
         onDataChange(result.data);
         setError(`Successfully replaced ${result.replaced_count} occurrence(s)`);
         setReplacePreview([]);
+        setSelectedReplacements(new Set());
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Replace failed');
     } finally {
       setIsReplacing(false);
+    }
+  };
+
+  const toggleReplacement = (idx: number) => {
+    const newSet = new Set(selectedReplacements);
+    if (newSet.has(idx)) {
+      newSet.delete(idx);
+    } else {
+      newSet.add(idx);
+    }
+    setSelectedReplacements(newSet);
+  };
+
+  const toggleAllReplacements = () => {
+    if (selectedReplacements.size === replacePreview.length) {
+      setSelectedReplacements(new Set());
+    } else {
+      setSelectedReplacements(new Set(replacePreview.map((_, idx) => idx)));
     }
   };
 
@@ -299,7 +478,7 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
                 </Alert>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button onClick={handleSearch} disabled={isSearching}>
                   {isSearching ? (
                     <>
@@ -313,12 +492,91 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
                     </>
                   )}
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowHistory(!showHistory)}
+                  disabled={searchHistory.length === 0}
+                >
+                  <History className="mr-2 h-4 w-4" />
+                  History ({searchHistory.length})
+                </Button>
                 {searchResults.length > 0 && (
-                  <Badge variant="secondary">
-                    {searchResults.length} result(s)
-                  </Badge>
+                  <>
+                    <Badge variant="secondary">
+                      {searchResults.length} result(s)
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => exportResults('csv')}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export CSV
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => exportResults('json')}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export JSON
+                    </Button>
+                  </>
                 )}
               </div>
+
+              {/* Search History */}
+              {showHistory && searchHistory.length > 0 && (
+                <ScrollArea className="h-48 border rounded-md">
+                  <div className="p-2">
+                    <div className="flex items-center justify-between mb-2 px-2">
+                      <h3 className="text-sm font-semibold">Recent Searches</h3>
+                      <Button variant="ghost" size="sm" onClick={clearHistory}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {searchHistory.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-2 hover:bg-muted rounded cursor-pointer transition-colors flex items-center justify-between group"
+                      >
+                        <div className="flex-1" onClick={() => loadFromHistory(item)}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm">{item.searchText}</span>
+                            {item.replaceText && (
+                              <>
+                                <span className="text-muted-foreground">→</span>
+                                <span className="font-mono text-sm text-green-600">{item.replaceText}</span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex gap-1 mt-1">
+                            {item.caseSensitive && <Badge variant="outline" className="text-xs">Aa</Badge>}
+                            {item.wholeWord && <Badge variant="outline" className="text-xs">Word</Badge>}
+                            {item.useRegex && <Badge variant="outline" className="text-xs">.*</Badge>}
+                            {item.selectedColumn !== 'all' && (
+                              <Badge variant="outline" className="text-xs">
+                                {csvData.headers[parseInt(item.selectedColumn)]}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteHistoryItem(item.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
 
               {/* Search Results */}
               {searchResults.length > 0 && (
@@ -434,7 +692,7 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
                 </Alert>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button onClick={handlePreviewReplace} disabled={isReplacing}>
                   {isReplacing ? (
                     <>
@@ -446,6 +704,14 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
                   )}
                 </Button>
                 <Button
+                  onClick={handleReplaceSelected}
+                  disabled={isReplacing || selectedReplacements.size === 0}
+                  variant="default"
+                >
+                  <Replace className="mr-2 h-4 w-4" />
+                  Replace Selected ({selectedReplacements.size})
+                </Button>
+                <Button
                   onClick={handleReplaceAll}
                   disabled={isReplacing || replacePreview.length === 0}
                   variant="destructive"
@@ -454,9 +720,18 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
                   Replace All
                 </Button>
                 {replacePreview.length > 0 && (
-                  <Badge variant="secondary">
-                    {replacePreview.length} replacement(s)
-                  </Badge>
+                  <>
+                    <Badge variant="secondary">
+                      {replacePreview.length} replacement(s)
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleAllReplacements}
+                    >
+                      {selectedReplacements.size === replacePreview.length ? 'Deselect All' : 'Select All'}
+                    </Button>
+                  </>
                 )}
               </div>
 
@@ -467,9 +742,17 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
                     {replacePreview.slice(0, 100).map((preview, idx) => (
                       <div
                         key={idx}
-                        className="p-2 hover:bg-muted rounded transition-colors"
+                        className={`p-2 rounded transition-colors border mb-2 ${
+                          selectedReplacements.has(idx)
+                            ? 'bg-blue-50 border-blue-300'
+                            : 'bg-background border-border hover:bg-muted'
+                        }`}
                       >
                         <div className="flex items-center gap-2 mb-1">
+                          <Checkbox
+                            checked={selectedReplacements.has(idx)}
+                            onCheckedChange={() => toggleReplacement(idx)}
+                          />
                           <Badge variant="outline" className="text-xs">
                             Row {preview.row_index + 1}
                           </Badge>
@@ -477,7 +760,7 @@ export const SearchReplace: React.FC<SearchReplaceProps> = ({
                             {csvData.headers[preview.column_index]}
                           </Badge>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="grid grid-cols-2 gap-2 text-xs ml-6">
                           <div>
                             <span className="text-muted-foreground">Original: </span>
                             <span className="font-mono">{preview.original_value}</span>
