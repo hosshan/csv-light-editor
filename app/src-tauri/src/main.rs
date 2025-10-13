@@ -23,12 +23,12 @@ fn main() {
         .manage(app_state)
         .manage(settings_state)
         .setup(|app| {
-            // Handle file open from command line arguments (macOS)
+            // Handle file open from command line arguments (macOS - app not running)
             let args: Vec<String> = std::env::args().collect();
             if args.len() > 1 {
                 let file_path = &args[1];
                 if file_path.ends_with(".csv") {
-                    // Emit event to frontend to open the file
+                    println!("Opening file from args: {}", file_path);
                     let _ = app.emit_all("open-file", file_path.clone());
                 }
             }
@@ -37,6 +37,7 @@ fn main() {
             let app_handle = app.handle();
             app.listen_global("tauri://file-drop", move |event| {
                 if let Some(payload) = event.payload() {
+                    println!("File drop event: {}", payload);
                     // Parse the payload to extract file paths
                     if let Ok(files) = serde_json::from_str::<Vec<String>>(payload) {
                         if let Some(file_path) = files.first() {
@@ -49,6 +50,12 @@ fn main() {
             });
 
             Ok(())
+        })
+        .on_menu_event(|event| {
+            // macOS specific: Handle "Open File" from Finder (app already running)
+            match event.menu_item_id() {
+                _ => {}
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::csv::open_csv_file,
