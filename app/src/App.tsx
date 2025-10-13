@@ -9,6 +9,7 @@ import { useCsvStore } from './store/csvStore';
 import { useTauri } from './hooks/useTauri';
 import { Loader2 } from 'lucide-react';
 import type { SaveOptions } from './hooks/useTauri';
+import { listen } from '@tauri-apps/api/event';
 
 function App() {
   const { data, currentFilePath, hasUnsavedChanges, isLoading, error, setCurrentFilePath, markSaved, setError } = useCsvStore();
@@ -17,6 +18,22 @@ function App() {
   const [saveMode, setSaveMode] = useState<'save' | 'saveAs'>('save');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchMode, setSearchMode] = useState<'search' | 'replace'>('search');
+
+  // Listen for file open events from macOS
+  useEffect(() => {
+    const unlisten = listen<string>('open-file', async (event) => {
+      const filePath = event.payload;
+      try {
+        await tauriAPI.openCsvFile(filePath);
+      } catch (error) {
+        setError(`Failed to open file: ${error}`);
+      }
+    });
+
+    return () => {
+      unlisten.then(fn => fn());
+    };
+  }, [tauriAPI, setError]);
 
   const handleSave = useCallback(async () => {
     if (!data) return;
