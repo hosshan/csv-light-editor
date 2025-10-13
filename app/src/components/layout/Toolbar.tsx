@@ -8,7 +8,9 @@ import {
   Search,
   Settings,
   FileText,
-  Shield
+  Shield,
+  CheckSquare,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useCsvStore } from '../../store/csvStore';
@@ -17,6 +19,8 @@ import { DataTypeDetection } from '../DataTypeDetection';
 import { SearchReplace } from '../SearchReplace';
 import { ImportExportSettings } from '../ImportExportSettings';
 import { SortMenu } from '../SortMenu';
+import { CustomValidation } from '../CustomValidation';
+import { DataQuality } from '../DataQuality';
 
 interface ToolbarProps {
   onSave?: () => void;
@@ -48,6 +52,8 @@ export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
   const [isDataTypeDialogOpen, setIsDataTypeDialogOpen] = useState(false);
   const [isSearchReplaceDialogOpen, setIsSearchReplaceDialogOpen] = useState(false);
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
+  const [isCustomValidationOpen, setIsCustomValidationOpen] = useState(false);
+  const [isDataQualityOpen, setIsDataQualityOpen] = useState(false);
 
   const handleOpenFile = async () => {
     try {
@@ -166,7 +172,31 @@ export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
             title="Data Type Detection"
           >
             <Shield className="h-4 w-4" />
-            <span>Validate</span>
+            <span>Types</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!data}
+            onClick={() => setIsCustomValidationOpen(true)}
+            className="flex items-center space-x-1"
+            title="Custom Validation Rules"
+          >
+            <CheckSquare className="h-4 w-4" />
+            <span>Rules</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!data}
+            onClick={() => setIsDataQualityOpen(true)}
+            className="flex items-center space-x-1"
+            title="Data Quality Analysis"
+          >
+            <BarChart3 className="h-4 w-4" />
+            <span>Quality</span>
           </Button>
 
           {data && (
@@ -218,6 +248,20 @@ export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
             onClose={() => setIsSearchReplaceDialogOpen(false)}
             csvData={data}
             onDataChange={(newData) => replaceAll(newData, 'Replace all occurrences')}
+          />
+          <CustomValidation
+            isOpen={isCustomValidationOpen}
+            onClose={() => setIsCustomValidationOpen(false)}
+            csvData={data}
+          />
+          <DataQuality
+            isOpen={isDataQualityOpen}
+            onClose={() => setIsDataQualityOpen(false)}
+            csvData={data}
+            onApplyCleansing={(result) => {
+              console.log('Cleansing applied:', result);
+              // Reload data or update UI
+            }}
           />
         </>
       )}
