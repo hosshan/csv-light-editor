@@ -16,7 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, FileDown, Eye, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, FileDown, Eye, CheckCircle2, AlertCircle, Copy } from 'lucide-react';
 import type { CsvData } from '@/types/csv';
 
 interface ExportDialogProps {
@@ -46,8 +46,10 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
   const [preview, setPreview] = useState<string>('');
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -142,6 +144,36 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
       setError(err instanceof Error ? err.message : 'Failed to export data');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleCopyToClipboard = async () => {
+    setIsCopying(true);
+    setError(null);
+    setCopySuccess(false);
+
+    try {
+      const options: ExportOptions = {
+        format,
+        include_headers: includeHeaders,
+        pretty_print: prettyPrint,
+      };
+
+      await invoke('copy_to_clipboard', {
+        data: csvData,
+        options,
+      });
+
+      setCopySuccess(true);
+
+      // Reset success message after 2 seconds
+      setTimeout(() => {
+        setCopySuccess(false);
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to copy to clipboard');
+    } finally {
+      setIsCopying(false);
     }
   };
 
@@ -341,11 +373,35 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
           </Alert>
         )}
 
+        {copySuccess && (
+          <Alert className="flex-shrink-0">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertDescription>Copied to clipboard successfully!</AlertDescription>
+          </Alert>
+        )}
+
         <DialogFooter className="flex-shrink-0">
-          <Button variant="outline" onClick={onClose} disabled={isExporting}>
+          <Button variant="outline" onClick={onClose} disabled={isExporting || isCopying}>
             Cancel
           </Button>
-          <Button onClick={handleExport} disabled={isExporting}>
+          <Button
+            variant="secondary"
+            onClick={handleCopyToClipboard}
+            disabled={isExporting || isCopying}
+          >
+            {isCopying ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Copying...
+              </>
+            ) : (
+              <>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy to Clipboard
+              </>
+            )}
+          </Button>
+          <Button onClick={handleExport} disabled={isExporting || isCopying}>
             {isExporting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -354,7 +410,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
             ) : (
               <>
                 <FileDown className="mr-2 h-4 w-4" />
-                Export
+                Export to File
               </>
             )}
           </Button>

@@ -906,3 +906,25 @@ pub async fn generate_export_preview(
     let preview = Exporter::generate_preview(&data, &options, max_rows)?;
     Ok(preview)
 }
+
+// Copy to clipboard
+#[tauri::command]
+pub async fn copy_to_clipboard(
+    data: CsvData,
+    options: ExportOptions,
+    app_handle: tauri::AppHandle,
+) -> Result<(), AppError> {
+    // Generate the full export string
+    let export_string = Exporter::generate_preview(&data, &options, data.rows.len())?;
+
+    // Use Tauri's clipboard API
+    app_handle
+        .clipboard_manager()
+        .write_text(export_string)
+        .map_err(|e| AppError::new(
+            format!("Failed to copy to clipboard: {}", e),
+            "CLIPBOARD_ERROR",
+        ))?;
+
+    Ok(())
+}
