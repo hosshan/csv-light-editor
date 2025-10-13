@@ -10,7 +10,8 @@ import {
   FileText,
   Shield,
   CheckSquare,
-  BarChart3
+  BarChart3,
+  FileDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useCsvStore } from '../../store/csvStore';
@@ -21,6 +22,7 @@ import { ImportExportSettings } from '../ImportExportSettings';
 import { SortMenu } from '../SortMenu';
 import { CustomValidation } from '../CustomValidation';
 import { DataQuality } from '../DataQuality';
+import { ExportDialog } from '../ExportDialog';
 
 interface ToolbarProps {
   onSave?: () => void;
@@ -54,6 +56,7 @@ export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [isCustomValidationOpen, setIsCustomValidationOpen] = useState(false);
   const [isDataQualityOpen, setIsDataQualityOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
   const handleOpenFile = async () => {
     try {
@@ -121,6 +124,18 @@ export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
           >
             <SaveAll className="h-4 w-4" />
             <span>Save As</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsExportDialogOpen(true)}
+            disabled={!data}
+            className="flex items-center space-x-1"
+            title="Export to other formats"
+          >
+            <FileDown className="h-4 w-4" />
+            <span>Export</span>
           </Button>
         </div>
 
@@ -261,6 +276,14 @@ export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
             onApplyCleansing={(result) => {
               console.log('Cleansing applied:', result);
               // Reload data or update UI
+            }}
+          />
+          <ExportDialog
+            isOpen={isExportDialogOpen}
+            onClose={() => setIsExportDialogOpen(false)}
+            csvData={data}
+            onExportComplete={() => {
+              console.log('Export completed');
             }}
           />
         </>
