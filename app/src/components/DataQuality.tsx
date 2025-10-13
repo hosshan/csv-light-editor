@@ -119,7 +119,7 @@ export const DataQuality: React.FC<DataQualityProps> = ({
     setIsCleansing(true);
     setError(null);
     try {
-      const [updatedData, result] = await invoke<[CsvData, CleansingResult]>('cleanse_data', {
+      const [, result] = await invoke<[CsvData, CleansingResult]>('cleanse_data', {
         data: csvData,
         options: {
           action: 'removeduplicates',
@@ -145,7 +145,7 @@ export const DataQuality: React.FC<DataQualityProps> = ({
     setIsCleansing(true);
     setError(null);
     try {
-      const [updatedData, result] = await invoke<[CsvData, CleansingResult]>('cleanse_data', {
+      const [, result] = await invoke<[CsvData, CleansingResult]>('cleanse_data', {
         data: csvData,
         options: {
           action: 'removeoutliers',

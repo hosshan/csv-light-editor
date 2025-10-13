@@ -97,8 +97,8 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
       };
 
       const ext = extensions[format];
-      const defaultPath = csvData.metadata?.file_path
-        ? csvData.metadata.file_path.replace(/\.[^.]+$/, `.${ext}`)
+      const defaultPath = csvData.metadata?.path
+        ? csvData.metadata.path.replace(/\.[^.]+$/, `.${ext}`)
         : `export.${ext}`;
 
       // Show save dialog
