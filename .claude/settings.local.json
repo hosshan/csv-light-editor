@@ -18,7 +18,17 @@
       "Bash(gh pr list:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr comment:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo clean:*)",
+      "Bash(cargo:*)",
+      "Bash(sips:*)",
+      "Bash(iconutil:*)",
+      "Bash(yes)",
+      "Bash(ls:*)",
+      "Bash(awk:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(plutil:*)"
     ],
     "deny": [],
     "ask": []
