@@ -7,6 +7,7 @@ use crate::csv_engine::data_types::{DataType, DataTypeDetector};
 use crate::csv_engine::validation::{ValidationRule, Validator, ValidationError as CustomValidationError};
 use crate::csv_engine::quality::QualityAnalyzer;
 use crate::csv_engine::cleansing::{DataCleanser, CleansingOptions, CleansingResult};
+use crate::csv_engine::export::{Exporter, ExportFormat, ExportOptions};
 use crate::metadata::CsvMetadata;
 use crate::state::AppState;
 use crate::utils::AppError;
@@ -881,4 +882,27 @@ pub async fn cleanse_data(
     data.metadata.row_count = data.rows.len();
 
     Ok((data, result))
+}
+
+// Export to various formats
+#[tauri::command]
+pub async fn export_data(
+    path: String,
+    data: CsvData,
+    options: ExportOptions,
+) -> Result<(), AppError> {
+    let path = Path::new(&path);
+    Exporter::export(path, &data, &options)?;
+    Ok(())
+}
+
+// Generate export preview
+#[tauri::command]
+pub async fn generate_export_preview(
+    data: CsvData,
+    options: ExportOptions,
+    max_rows: usize,
+) -> Result<String, AppError> {
+    let preview = Exporter::generate_preview(&data, &options, max_rows)?;
+    Ok(preview)
 }
