@@ -295,16 +295,16 @@
 - [ ] Excel形式（オプション） - 将来実装予定
 
 #### タスク5.3: エンコーディング処理
-- [ ] UTF-8/Shift_JIS/EUC-JP対応
-- [ ] BOM処理
-- [ ] 改行コード変換
-- [ ] 文字化け防止
+- [x] UTF-8/Shift_JIS/EUC-JP対応 - save_csv_file_as で実装済み
+- [x] BOM処理 - UTF-8 BOM オプション実装済み (ImportExportSettings)
+- [x] 改行コード変換 - LF/CRLF/CR 対応実装済み (ImportExportSettings)
+- [x] 文字化け防止 - エンコーディング自動検出実装済み
 
 #### タスク5.4: クリップボード連携
-- [ ] コピー機能
-- [ ] ペースト機能
-- [ ] 形式選択
-- [ ] スマートペースト
+- [x] コピー機能 - ExportDialogにクリップボードコピーボタン実装済み
+- [x] 形式選択 - 全5形式(CSV/TSV/Markdown/JSON)でコピー可能
+- [ ] ペースト機能 - 将来実装予定
+- [ ] スマートペースト - 将来実装予定
 
 ## Phase 6: AI機能実装（Week 9-10）
 
