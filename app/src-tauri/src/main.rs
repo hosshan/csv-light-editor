@@ -11,6 +11,7 @@ use state::{AppState, AppStateInner};
 use tokio::sync::Mutex;
 use settings::SettingsManager;
 use commands::settings::SettingsState;
+use tauri::Manager;
 
 fn main() {
     env_logger::init();
@@ -21,6 +22,16 @@ fn main() {
     tauri::Builder::default()
         .manage(app_state)
         .manage(settings_state)
+        .setup(|app| {
+            // Register file open handler for macOS
+            let handle = app.handle();
+            app.listen_global("tauri://file-drop", move |event| {
+                if let Some(payload) = event.payload() {
+                    println!("File drop event: {}", payload);
+                }
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::csv::open_csv_file,
             commands::csv::save_csv_file,
