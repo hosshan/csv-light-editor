@@ -912,15 +912,20 @@ pub async fn generate_export_preview(
 pub async fn copy_to_clipboard(
     data: CsvData,
     options: ExportOptions,
-    app_handle: tauri::AppHandle,
 ) -> Result<(), AppError> {
     // Generate the full export string
     let export_string = Exporter::generate_preview(&data, &options, data.rows.len())?;
 
-    // Use Tauri's clipboard API
-    app_handle
-        .clipboard_manager()
-        .write_text(export_string)
+    // Use copypasta for clipboard operations
+    use copypasta::{ClipboardContext, ClipboardProvider};
+    let mut clipboard = ClipboardContext::new()
+        .map_err(|e| AppError::new(
+            format!("Failed to access clipboard: {}", e),
+            "CLIPBOARD_ERROR",
+        ))?;
+
+    clipboard
+        .set_contents(export_string)
         .map_err(|e| AppError::new(
             format!("Failed to copy to clipboard: {}", e),
             "CLIPBOARD_ERROR",
