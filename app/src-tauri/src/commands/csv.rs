@@ -4,6 +4,9 @@ use tauri::State;
 use crate::csv_engine::{reader::CsvReader, writer::CsvWriter};
 use crate::csv_engine::reader::CsvData;
 use crate::csv_engine::data_types::{DataType, DataTypeDetector};
+use crate::csv_engine::validation::{ValidationRule, Validator, ValidationError as CustomValidationError};
+use crate::csv_engine::quality::QualityAnalyzer;
+use crate::csv_engine::cleansing::{DataCleanser, CleansingOptions, CleansingResult};
 use crate::metadata::CsvMetadata;
 use crate::state::AppState;
 use crate::utils::AppError;
@@ -844,4 +847,38 @@ pub async fn move_column(
     data.metadata.column_count = data.headers.len();
 
     Ok(data)
+}
+
+// Custom Validation Rules
+#[tauri::command]
+pub async fn validate_with_rules(
+    data: CsvData,
+    rules: Vec<ValidationRule>,
+) -> Result<Vec<CustomValidationError>, AppError> {
+    let validator = Validator::new(rules);
+    let errors = validator.validate(&data.rows, &data.headers);
+    Ok(errors)
+}
+
+// Data Quality Report
+#[tauri::command]
+pub async fn generate_quality_report(
+    data: CsvData,
+) -> Result<crate::csv_engine::quality::QualityReport, AppError> {
+    let report = QualityAnalyzer::analyze(&data.rows, &data.headers);
+    Ok(report)
+}
+
+// Data Cleansing
+#[tauri::command]
+pub async fn cleanse_data(
+    mut data: CsvData,
+    options: CleansingOptions,
+) -> Result<(CsvData, CleansingResult), AppError> {
+    let result = DataCleanser::cleanse(&mut data.rows, &data.headers, &options);
+
+    // Update metadata
+    data.metadata.row_count = data.rows.len();
+
+    Ok((data, result))
 }
