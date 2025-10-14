@@ -185,6 +185,15 @@ class TauriAPI {
       throw new Error(`Failed to move column: ${error}`);
     }
   }
+
+  async openFileInNewWindow(filePath: string): Promise<void> {
+    try {
+      await invoke('open_file_in_new_window', { filePath });
+    } catch (error) {
+      console.error('Failed to open file in new window:', error);
+      throw new Error(`Failed to open file in new window: ${error}`);
+    }
+  }
 }
 
 export const tauriAPI = new TauriAPI();

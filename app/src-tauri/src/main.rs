@@ -35,15 +35,17 @@ fn main() {
 
             // Handle file drop events
             let app_handle = app.handle();
-            app.listen_global("tauri://file-drop", move |event| {
-                if let Some(payload) = event.payload() {
-                    println!("File drop event: {}", payload);
-                    // Parse the payload to extract file paths
-                    if let Ok(files) = serde_json::from_str::<Vec<String>>(payload) {
-                        if let Some(file_path) = files.first() {
-                            if file_path.ends_with(".csv") {
-                                let _ = app_handle.emit_all("open-file", file_path.clone());
-                            }
+            let window = app.get_window("main").unwrap();
+
+            // Listen for file drop events via window events
+            window.on_window_event(move |event| {
+                if let tauri::WindowEvent::FileDrop(tauri::FileDropEvent::Dropped(paths)) = event {
+                    println!("File drop dropped: {:?}", paths);
+                    if let Some(file_path) = paths.first() {
+                        if file_path.to_string_lossy().ends_with(".csv") {
+                            let path_str = file_path.to_string_lossy().to_string();
+                            println!("Emitting open-file event for: {}", path_str);
+                            let _ = app_handle.emit_all("open-file", path_str);
                         }
                     }
                 }
@@ -58,6 +60,7 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            commands::file::open_file_in_new_window,
             commands::csv::open_csv_file,
             commands::csv::save_csv_file,
             commands::csv::save_csv_file_as,

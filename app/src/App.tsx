@@ -3,6 +3,7 @@ import { Toolbar } from './components/layout/Toolbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { CsvTable } from './components/csv/CsvTable';
 import { SaveDialog } from './components/SaveDialog';
+import { FileOpenDialog } from './components/FileOpenDialog';
 import { SelectionStatistics } from './components/SelectionStatistics';
 import { InlineSearchBar } from './components/InlineSearchBar';
 import { useCsvStore } from './store/csvStore';
@@ -12,28 +13,63 @@ import type { SaveOptions } from './hooks/useTauri';
 import { listen } from '@tauri-apps/api/event';
 
 function App() {
-  const { data, currentFilePath, hasUnsavedChanges, isLoading, error, setCurrentFilePath, markSaved, setError } = useCsvStore();
+  const { data, currentFilePath, hasUnsavedChanges, isLoading, error, setData, setCurrentFilePath, markSaved, setError } = useCsvStore();
   const tauriAPI = useTauri();
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveMode, setSaveMode] = useState<'save' | 'saveAs'>('save');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchMode, setSearchMode] = useState<'search' | 'replace'>('search');
+  const [showFileOpenDialog, setShowFileOpenDialog] = useState(false);
+  const [pendingFilePath, setPendingFilePath] = useState<string | null>(null);
+
+  const handleFileOpen = useCallback(async (filePath: string) => {
+    try {
+      console.log('Opening file:', filePath);
+      const csvData = await tauriAPI.openCsvFile(filePath);
+      console.log('CSV data loaded:', csvData);
+      setData(csvData, filePath);
+      setCurrentFilePath(filePath);
+    } catch (error) {
+      console.error('Error opening file:', error);
+      setError(`Failed to open file: ${error}`);
+    }
+  }, [tauriAPI, setData, setCurrentFilePath, setError]);
 
   // Listen for file open events from macOS
   useEffect(() => {
-    const unlisten = listen<string>('open-file', async (event) => {
-      const filePath = event.payload;
-      try {
-        await tauriAPI.openCsvFile(filePath);
-      } catch (error) {
-        setError(`Failed to open file: ${error}`);
-      }
+    const setupListener = async () => {
+      const unlisten = await listen<string>('open-file', async (event) => {
+        const filePath = event.payload;
+        console.log('Received open-file event in React:', filePath);
+
+        // Check if there's already a file open
+        if (data && currentFilePath) {
+          console.log('File already open, showing dialog');
+          // Show confirmation dialog
+          setPendingFilePath(filePath);
+          setShowFileOpenDialog(true);
+        } else {
+          console.log('No file open, opening directly');
+          // No file open, directly open the new file
+          await handleFileOpen(filePath);
+        }
+      });
+
+      return unlisten;
+    };
+
+    let unlistenFn: (() => void) | null = null;
+
+    setupListener().then(fn => {
+      unlistenFn = fn;
     });
 
     return () => {
-      unlisten.then(fn => fn());
+      if (unlistenFn) {
+        unlistenFn();
+      }
     };
-  }, [tauriAPI, setError]);
+  }, [data, currentFilePath, handleFileOpen]);
 
   const handleSave = useCallback(async () => {
     if (!data) return;
@@ -116,6 +152,26 @@ function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  const handleOpenInCurrentWindow = useCallback(async () => {
+    if (pendingFilePath) {
+      await handleFileOpen(pendingFilePath);
+      setPendingFilePath(null);
+      setShowFileOpenDialog(false);
+    }
+  }, [pendingFilePath, handleFileOpen]);
+
+  const handleOpenInNewWindow = useCallback(async () => {
+    if (pendingFilePath) {
+      try {
+        await tauriAPI.openFileInNewWindow(pendingFilePath);
+        setPendingFilePath(null);
+        setShowFileOpenDialog(false);
+      } catch (error) {
+        setError(`Failed to open file in new window: ${error}`);
+      }
+    }
+  }, [pendingFilePath, tauriAPI, setError]);
+
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
       {/* Toolbar */}
@@ -180,6 +236,17 @@ function App() {
         onClose={() => setShowSaveDialog(false)}
         onSave={handleSaveAs}
         title={saveMode === 'saveAs' ? 'Save As' : 'Save'}
+      />
+
+      <FileOpenDialog
+        isOpen={showFileOpenDialog}
+        onClose={() => {
+          setShowFileOpenDialog(false);
+          setPendingFilePath(null);
+        }}
+        onOpenInCurrentWindow={handleOpenInCurrentWindow}
+        onOpenInNewWindow={handleOpenInNewWindow}
+        fileName={pendingFilePath ? pendingFilePath.split('/').pop() || '' : ''}
       />
     </div>
   );
