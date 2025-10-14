@@ -18,7 +18,7 @@ export function FileOpenDialog({
 }: FileOpenDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Open File</DialogTitle>
           <DialogDescription>
@@ -39,13 +39,13 @@ export function FileOpenDialog({
             onClick={onOpenInNewWindow}
             className="w-full sm:w-auto"
           >
-            Open in New Window
+            New Window
           </Button>
           <Button
             onClick={onOpenInCurrentWindow}
             className="w-full sm:w-auto"
           >
-            Open in This Window
+            Replace
           </Button>
         </DialogFooter>
       </DialogContent>
