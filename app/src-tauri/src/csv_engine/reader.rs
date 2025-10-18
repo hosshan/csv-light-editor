@@ -138,6 +138,66 @@ impl CsvReader {
         })
     }
 
+    pub fn read_from_string(&mut self, text: &str) -> Result<CsvData> {
+        // Detect delimiter from the text
+        self.detect_delimiter_from_string(text)?;
+
+        let mut csv_reader = csv::ReaderBuilder::new()
+            .delimiter(self.delimiter)
+            .has_headers(self.has_headers)
+            .from_reader(text.as_bytes());
+
+        let headers: Vec<String> = if self.has_headers {
+            csv_reader
+                .headers()
+                .context("Failed to read CSV headers")?
+                .iter()
+                .map(|s| s.to_string())
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        let mut rows: Vec<Vec<String>> = Vec::new();
+        for result in csv_reader.records() {
+            let record = result.context("Failed to read CSV record")?;
+            let row: Vec<String> = record.iter().map(|s| s.to_string()).collect();
+            rows.push(row);
+        }
+
+        let mut metadata = CsvMetadata::from_pasted_data();
+        metadata.delimiter = String::from_utf8_lossy(&[self.delimiter]).to_string();
+        metadata.encoding = "UTF-8".to_string();
+        metadata.has_headers = self.has_headers;
+        metadata.update_counts(rows.len(), if !headers.is_empty() { headers.len() } else if !rows.is_empty() { rows[0].len() } else { 0 });
+
+        Ok(CsvData {
+            headers,
+            rows,
+            metadata,
+        })
+    }
+
+    fn detect_delimiter_from_string(&mut self, text: &str) -> Result<u8> {
+        let sample = text.lines().take(5).collect::<Vec<_>>().join("\n");
+        let buffer = sample.as_bytes();
+
+        let common_delimiters = vec![b',', b'\t', b';', b'|'];
+        let mut delimiter_counts = vec![0; common_delimiters.len()];
+
+        for (i, &delim) in common_delimiters.iter().enumerate() {
+            delimiter_counts[i] = buffer.iter().filter(|&&b| b == delim).count();
+        }
+
+        let max_index = delimiter_counts
+            .iter()
+            .position(|&count| count == *delimiter_counts.iter().max().unwrap())
+            .unwrap_or(0);
+
+        self.delimiter = common_delimiters[max_index];
+        Ok(self.delimiter)
+    }
+
     pub fn read_chunk(&mut self, path: &Path, start_row: usize, end_row: usize) -> Result<Vec<Vec<String>>> {
         let file = File::open(path)?;
         let mut reader = BufReader::new(file);

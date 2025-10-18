@@ -10,6 +10,7 @@ export interface SaveOptions {
 
 export interface TauriCommands {
   openCsvFile: (path: string) => Promise<CsvData>;
+  parseCsvFromText: (text: string) => Promise<CsvData>;
   saveCsvFile: (path: string, data: CsvData) => Promise<void>;
   saveCsvFileAs: (path: string, data: CsvData, options: SaveOptions) => Promise<void>;
   getCurrentFile: () => Promise<string | null>;
@@ -72,6 +73,15 @@ class TauriAPI {
     } catch (error) {
       console.error('Failed to open CSV file:', error);
       throw new Error(`Failed to open CSV file: ${error}`);
+    }
+  }
+
+  async parseCsvFromText(text: string): Promise<CsvData> {
+    try {
+      return await invoke<CsvData>('parse_csv_from_text', { text });
+    } catch (error) {
+      console.error('Failed to parse CSV from text:', error);
+      throw new Error(`Failed to parse CSV from text: ${error}`);
     }
   }
 

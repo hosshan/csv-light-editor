@@ -130,6 +130,19 @@ function App() {
     }
   }, [data, currentFilePath, tauriAPI, handleFileOpen]);
 
+  const handlePaste = useCallback(async (text: string) => {
+    try {
+      console.log('Pasting CSV text:', text.substring(0, 100));
+      const csvData = await tauriAPI.parseCsvFromText(text);
+      console.log('CSV data parsed:', csvData);
+      setData(csvData, null);
+      setCurrentFilePath(null);
+    } catch (error) {
+      console.error('Error parsing pasted CSV:', error);
+      setError(`Failed to parse pasted CSV: ${error}`);
+    }
+  }, [tauriAPI, setData, setCurrentFilePath, setError]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 's') {
@@ -153,9 +166,24 @@ function App() {
       }
     };
 
+    const handlePasteEvent = (e: ClipboardEvent) => {
+      // Only handle paste when no file is open
+      if (!data || !currentFilePath) {
+        const text = e.clipboardData?.getData('text/plain');
+        if (text && text.trim()) {
+          e.preventDefault();
+          handlePaste(text);
+        }
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave, handleOpenFile]);
+    window.addEventListener('paste', handlePasteEvent);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('paste', handlePasteEvent);
+    };
+  }, [handleSave, handleOpenFile, handlePaste, data, currentFilePath]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
