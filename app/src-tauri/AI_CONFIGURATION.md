@@ -31,14 +31,14 @@ CSV Light Editorの AI機能は環境変数で設定できます。
 
 | 変数名 | デフォルト | 説明 |
 |--------|-----------|------|
-| `AI_MODEL_NAME` | `local` | 使用するAIモデル名 |
+| `AI_MODEL_NAME` | `local` | 使用するAIモデル名<br/>• `local`: パターンマッチング（APIキー不要）<br/>• `gpt-4o-mini`: OpenAI（高速・安価）<br/>• `gpt-4o`: OpenAI（高精度）<br/>• `gemini-1.5-flash`: Google Gemini（高速）<br/>• `gemini-1.5-pro`: Google Gemini（高精度） |
 
 ### 外部APIサービス設定（オプション）
 
 | 変数名 | デフォルト | 説明 |
 |--------|-----------|------|
-| `AI_API_KEY` | - | 外部AIサービスのAPIキー |
-| `AI_API_ENDPOINT` | - | 外部AIサービスのエンドポイント |
+| `AI_API_KEY` | - | 外部AIサービスのAPIキー<br/>• OpenAI: `sk-proj-...`<br/>• Gemini: `AIzaSy...` |
+| `AI_API_ENDPOINT` | 自動検出 | APIエンドポイント（通常は設定不要） |
 
 ### 機能フラグ
 
@@ -49,7 +49,53 @@ CSV Light Editorの AI機能は環境変数で設定できます。
 
 ## 設定例
 
-### 例1: デバッグモード有効化
+### 例1: OpenAI (GPT-4o-mini) を使用
+
+```bash
+# .env
+AI_ENABLED=true
+AI_MODEL_NAME=gpt-4o-mini
+AI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxx
+
+# オプション: デバッグモードで動作確認
+AI_DEBUG_MODE=true
+```
+
+**取得方法:**
+1. https://platform.openai.com/api-keys にアクセス
+2. "Create new secret key" でAPIキーを作成
+3. 生成されたキーを `AI_API_KEY` に設定
+
+**料金:** GPT-4o-miniは非常に安価（入力$0.15/1M tokens）
+
+### 例2: Google Gemini を使用
+
+```bash
+# .env
+AI_ENABLED=true
+AI_MODEL_NAME=gemini-1.5-flash
+AI_API_KEY=AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**取得方法:**
+1. https://makersuite.google.com/app/apikey にアクセス
+2. "Create API key" でキーを作成
+3. 生成されたキーを `AI_API_KEY` に設定
+
+**料金:** Gemini 1.5 Flashは無料枠あり（月1500リクエスト）
+
+### 例3: ローカル処理のみ（デフォルト）
+
+```bash
+# .env
+AI_ENABLED=true
+AI_MODEL_NAME=local
+# AI_API_KEY は不要
+```
+
+パターンマッチングで動作。APIキー不要、完全無料。
+
+### 例4: デバッグモード有効化
 
 ```bash
 # .env
@@ -59,7 +105,7 @@ AI_DEBUG_MODE=true
 
 起動時にAI設定の詳細が表示されます。
 
-### 例2: 大規模データセット対応
+### 例5: 大規模データセット対応
 
 ```bash
 # .env
@@ -71,7 +117,7 @@ AI_OPERATION_TIMEOUT_SECS=60
 
 より多くの行を一度に処理し、タイムアウトを延長します。
 
-### 例3: 基本機能のみ
+### 例6: 基本機能のみ
 
 ```bash
 # .env
@@ -82,7 +128,7 @@ AI_ENABLE_TRANSFORMATIONS=true
 
 高度な分析は無効化し、基本的な統計とデータ変換のみ使用します。
 
-### 例4: 完全無効化
+### 例7: 完全無効化
 
 ```bash
 # .env

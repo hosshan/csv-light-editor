@@ -66,7 +66,7 @@ pub async fn ai_detect_intent(
 ) -> Result<DetectIntentResponse, String> {
     let assistant = AiAssistant::new();
 
-    match assistant.detect_intent(&request.prompt) {
+    match assistant.detect_intent(&request.prompt).await {
         Ok(intent) => {
             let intent_type = match &intent.intent_type {
                 crate::ai::IntentType::Analysis { analysis_type } => {
@@ -111,7 +111,7 @@ pub async fn ai_execute(
 
     // Step 1: Detect intent
     let intent = assistant
-        .detect_intent(&request.prompt)
+        .detect_intent(&request.prompt).await
         .map_err(|e| format!("Failed to detect intent: {}", e))?;
 
     // For now, return error message instructing to load CSV data

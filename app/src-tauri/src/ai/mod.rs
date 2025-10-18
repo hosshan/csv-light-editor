@@ -6,20 +6,22 @@ mod intent;
 mod analyzer;
 mod transformer;
 mod config;
+mod llm_client;
 
 pub use intent::{Intent, IntentType, TargetScope, AnalysisType, TransformOperation};
 pub use analyzer::DataAnalyzer;
 pub use transformer::DataTransformer;
 pub use config::AiConfig;
+pub use llm_client::{LlmClient, LlmProvider, OpenAiClient, GeminiClient};
 
 /// AI Assistant that processes user prompts in two stages:
 /// 1. Intent Detection: Understand what the user wants to do
 /// 2. Execution: Perform the analysis or transformation
-#[derive(Debug)]
 pub struct AiAssistant {
     analyzer: DataAnalyzer,
     transformer: DataTransformer,
     config: AiConfig,
+    llm_client: Option<Box<dyn LlmClient>>,
 }
 
 impl AiAssistant {
@@ -28,11 +30,34 @@ impl AiAssistant {
     }
 
     pub fn with_config(config: AiConfig) -> Self {
+        let llm_client = Self::create_llm_client(&config);
         Self {
             analyzer: DataAnalyzer::new(),
             transformer: DataTransformer::new(),
             config,
+            llm_client,
         }
+    }
+
+    fn create_llm_client(config: &AiConfig) -> Option<Box<dyn LlmClient>> {
+        // Check if external API is configured
+        if let Some(api_key) = config.get_api_key() {
+            let model_name = Some(config.model_name.clone());
+
+            // Determine provider based on endpoint or model name
+            if config.model_name.starts_with("gpt") ||
+               config.get_api_endpoint().map_or(false, |e| e.contains("openai")) {
+                log::info!("Using OpenAI client with model: {}", config.model_name);
+                return Some(Box::new(OpenAiClient::new(api_key.to_string(), model_name)));
+            } else if config.model_name.starts_with("gemini") ||
+                     config.get_api_endpoint().map_or(false, |e| e.contains("googleapis")) {
+                log::info!("Using Gemini client with model: {}", config.model_name);
+                return Some(Box::new(GeminiClient::new(api_key.to_string(), model_name)));
+            }
+        }
+
+        log::info!("Using local pattern-based intent detection");
+        None
     }
 
     pub fn config(&self) -> &AiConfig {
@@ -45,11 +70,19 @@ impl AiAssistant {
 
     /// Stage 1: Detect intent from user prompt
     /// This determines what the user wants to do without loading all CSV data
-    pub fn detect_intent(&self, prompt: &str) -> Result<Intent> {
+    pub async fn detect_intent(&self, prompt: &str) -> Result<Intent> {
         if !self.is_enabled() {
             return Err(anyhow!("AI features are disabled"));
         }
-        intent::detect_intent(prompt)
+
+        // Use LLM if configured, otherwise fall back to local pattern matching
+        if let Some(llm_client) = &self.llm_client {
+            log::debug!("Using LLM for intent detection");
+            llm_client.detect_intent(prompt).await
+        } else {
+            log::debug!("Using local pattern matching for intent detection");
+            intent::detect_intent(prompt)
+        }
     }
 
     /// Stage 2: Execute the detected intent with relevant CSV data
