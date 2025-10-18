@@ -43,6 +43,20 @@ pub async fn open_csv_file(
 }
 
 #[tauri::command]
+pub async fn parse_csv_from_text(
+    text: String,
+    state: State<'_, AppState>,
+) -> Result<CsvData, AppError> {
+    let mut reader = CsvReader::new();
+    let csv_data = reader.read_from_string(&text)?;
+
+    let mut state = state.lock().await;
+    state.current_file = None; // No file path for pasted data
+
+    Ok(csv_data)
+}
+
+#[tauri::command]
 pub async fn save_csv_file(
     path: String,
     data: CsvData,

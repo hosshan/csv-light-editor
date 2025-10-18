@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use anyhow::Result;
+use chrono;
 use crate::commands::csv::{SortState, SortColumn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +52,21 @@ impl CsvMetadata {
     pub fn update_counts(&mut self, row_count: usize, column_count: usize) {
         self.row_count = row_count;
         self.column_count = column_count;
+    }
+
+    pub fn from_pasted_data() -> Self {
+        Self {
+            filename: "Pasted Data".to_string(),
+            path: "".to_string(),
+            row_count: 0,
+            column_count: 0,
+            has_headers: true,
+            delimiter: ",".to_string(),
+            encoding: "UTF-8".to_string(),
+            file_size: 0,
+            last_modified: chrono::Local::now().to_rfc3339(),
+            sort_state: None,
+        }
     }
 }
 
