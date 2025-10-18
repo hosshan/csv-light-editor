@@ -116,6 +116,20 @@ function App() {
     }
   }, [data, currentFilePath, tauriAPI, setCurrentFilePath, markSaved, setError]);
 
+  const handleOpenFile = useCallback(async () => {
+    const filePath = await tauriAPI.openFileDialog();
+    if (filePath) {
+      // If a file is already open, show confirmation dialog
+      if (data && currentFilePath) {
+        setPendingFilePath(filePath);
+        setShowFileOpenDialog(true);
+      } else {
+        // No file open, directly open the new file
+        await handleFileOpen(filePath);
+      }
+    }
+  }, [data, currentFilePath, tauriAPI, handleFileOpen]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 's') {
@@ -133,12 +147,15 @@ function App() {
         e.preventDefault();
         setSearchMode('replace');
         setIsSearchOpen(true);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
+        e.preventDefault();
+        handleOpenFile();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave]);
+  }, [handleSave, handleOpenFile]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
