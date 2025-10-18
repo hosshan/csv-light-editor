@@ -12,6 +12,12 @@ CSV Light Editor is a high-performance CSV editing application for Mac, built wi
 ```bash
 cd app
 pnpm install        # Install dependencies
+
+# Optional: Configure AI settings
+cd src-tauri
+cp .env.example .env  # Copy and edit as needed
+cd ..
+
 pnpm tauri dev      # Run development server with hot reload
 ```
 
@@ -82,3 +88,23 @@ cargo fmt           # Format Rust code
 - **Allowed APIs**: Only `shell.open` is enabled for security
 - **Dev Server**: Runs on `http://localhost:1420`
 - **Bundle ID**: `io.hosshan.csv-light-editor`
+
+## AI Features Configuration
+
+AI features can be configured via environment variables in `app/src-tauri/.env`.
+
+### Quick Setup
+```bash
+cd app/src-tauri
+cp .env.example .env
+# Edit .env to customize settings
+```
+
+### Key Configuration Options
+- `AI_ENABLED` - Enable/disable AI features (default: true)
+- `AI_DEBUG_MODE` - Enable debug logging (default: false)
+- `AI_MAX_ROWS_PER_OPERATION` - Max rows per operation (default: 10000)
+- `AI_ENABLE_ADVANCED_ANALYTICS` - Enable advanced analytics (default: false)
+- `AI_ENABLE_TRANSFORMATIONS` - Enable data transformations (default: true)
+
+For complete configuration documentation, see [AI_CONFIGURATION.md](app/src-tauri/AI_CONFIGURATION.md)

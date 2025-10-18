@@ -135,7 +135,7 @@ function App() {
       console.log('Pasting CSV text:', text.substring(0, 100));
       const csvData = await tauriAPI.parseCsvFromText(text);
       console.log('CSV data parsed:', csvData);
-      setData(csvData, null);
+      setData(csvData, undefined);
       setCurrentFilePath(null);
     } catch (error) {
       console.error('Error parsing pasted CSV:', error);

@@ -27,6 +27,7 @@ chrono = "0.4"
 regex = "1.10"
 dirs = "5.0"
 uuid = { version = "1.6", features = ["v4"] }
+dotenvy = "0.15"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

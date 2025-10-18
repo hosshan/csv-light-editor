@@ -1,22 +1,49 @@
-import { FileText, BarChart3, Filter, Calculator } from 'lucide-react';
+import { FileText, BarChart3, Filter, Calculator, Bot } from 'lucide-react';
 import { useCsvStore } from '../../store/csvStore';
 import { formatNumber, formatFileSize } from '../../lib/utils';
+import { AiAssistant } from '../AiAssistant';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
 export function Sidebar() {
   const { data, filters, sorts } = useCsvStore();
 
-  if (!data) {
-    return (
-      <div className="w-64 bg-muted/50 border-r border-border p-4">
-        <div className="text-sm text-muted-foreground text-center">
-          No file opened
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-64 bg-muted/50 border-r border-border flex flex-col">
+    <div className="w-80 bg-muted/50 border-r border-border flex flex-col">
+      <Tabs defaultValue="info" className="flex-1 flex flex-col">
+        <TabsList className="grid w-full grid-cols-2 m-2">
+          <TabsTrigger value="info" className="text-xs">
+            <FileText className="h-3 w-3 mr-1" />
+            Info
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="text-xs">
+            <Bot className="h-3 w-3 mr-1" />
+            AI
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="info" className="flex-1 overflow-y-auto m-0">
+          {!data ? (
+            <div className="p-4">
+              <div className="text-sm text-muted-foreground text-center">
+                No file opened
+              </div>
+            </div>
+          ) : (
+            <SidebarInfo data={data} filters={filters} sorts={sorts} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="ai" className="flex-1 overflow-hidden m-0 p-2">
+          <AiAssistant />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function SidebarInfo({ data, filters, sorts }: { data: any; filters: any[]; sorts: any[] }) {
+  return (
+    <div className="flex flex-col">
       {/* File Information */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center space-x-2 mb-3">
@@ -56,7 +83,7 @@ export function Sidebar() {
         </div>
 
         <div className="space-y-1 text-xs max-h-48 overflow-y-auto">
-          {data.headers.map((header, index) => (
+          {data.headers.map((header: string, index: number) => (
             <div
               key={index}
               className="flex items-center justify-between p-1 hover:bg-accent rounded text-xs"
