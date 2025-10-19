@@ -49,6 +49,17 @@ interface CsvState {
   history: HistoryAction[];
   historyIndex: number;
 
+  // AI Assistant state
+  aiMessages: Array<{
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: Date;
+    type?: 'analysis' | 'transformation' | 'error';
+    data?: any;
+  }>;
+  aiPendingChanges: any | null;
+
   // Actions
   setData: (data: CsvData, filePath?: string) => void;
   setCurrentFilePath: (path: string | null) => void;
@@ -127,6 +138,11 @@ interface CsvState {
   replaceAllResults: (replaceText: string) => void;
   setScrollToCell: (callback: ((row: number, column: number) => void) | null) => void;
 
+  // AI Assistant actions
+  addAiMessage: (message: CsvState['aiMessages'][0]) => void;
+  setAiPendingChanges: (changes: any | null) => void;
+  clearAiMessages: () => void;
+
   markSaved: () => void;
   reset: () => void;
 }
@@ -174,6 +190,9 @@ export const useCsvStore = create<CsvState>()(
 
       history: [],
       historyIndex: -1,
+
+      aiMessages: [],
+      aiPendingChanges: null,
 
       // Actions
       setData: async (data, filePath) => {
@@ -1301,6 +1320,16 @@ export const useCsvStore = create<CsvState>()(
 
       setScrollToCell: (callback) => set({ scrollToCell: callback }),
 
+      // AI Assistant actions
+      addAiMessage: (message) => {
+        const state = get();
+        set({ aiMessages: [...state.aiMessages, message] });
+      },
+
+      setAiPendingChanges: (changes) => set({ aiPendingChanges: changes }),
+
+      clearAiMessages: () => set({ aiMessages: [], aiPendingChanges: null }),
+
       markSaved: () => set({ hasUnsavedChanges: false }),
 
       reset: () => set({
@@ -1325,7 +1354,9 @@ export const useCsvStore = create<CsvState>()(
         },
         columnWidths: {},
         defaultColumnWidth: 150,
-        currentSort: { columns: [] }
+        currentSort: { columns: [] },
+        aiMessages: [],
+        aiPendingChanges: null
       })
     }),
     { name: 'csv-store' }

@@ -6,6 +6,7 @@ mod metadata;
 mod state;
 mod utils;
 mod settings;
+mod ai;
 
 use state::{AppState, AppStateInner};
 use tokio::sync::Mutex;
@@ -14,9 +15,27 @@ use commands::settings::SettingsState;
 use tauri::Manager;
 
 fn main() {
+    // Load .env file (silently ignore if not found)
+    dotenvy::dotenv().ok();
+
     env_logger::init();
 
-    let app_state = AppState::new(AppStateInner::new());
+    // Load and validate AI configuration
+    let ai_config = ai::AiConfig::from_env();
+    if let Err(e) = ai_config.validate() {
+        log::error!("Invalid AI configuration: {}", e);
+        eprintln!("Error: Invalid AI configuration: {}", e);
+        std::process::exit(1);
+    }
+
+    // Print AI configuration summary in debug mode
+    if ai_config.debug_mode {
+        ai_config.print_summary();
+    } else {
+        log::info!("AI features enabled: {}", ai_config.is_enabled());
+    }
+
+    let app_state = Mutex::new(AppStateInner::new());
     let settings_state = SettingsState(Mutex::new(SettingsManager::new()));
 
     tauri::Builder::default()
@@ -93,6 +112,9 @@ fn main() {
             commands::settings::get_import_export_settings,
             commands::settings::update_import_export_settings,
             commands::settings::reset_import_export_settings,
+            commands::ai::ai_detect_intent,
+            commands::ai::ai_execute,
+            commands::ai::ai_apply_changes,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

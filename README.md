@@ -37,10 +37,33 @@ CSV Light Editor is a lightweight yet powerful desktop application designed to h
 
 ## Development
 
+### Setup
+
 ```bash
 cd app
 pnpm install        # Install dependencies
-pnpm tauri dev      # Run development server
+
+# Optional: Configure AI settings
+cd src-tauri
+cp .env.example .env  # Copy and edit as needed
+cd ../..
+
+# Run development server
+cd app
+pnpm tauri dev
+```
+
+### AI Configuration
+
+AI features can be customized via environment variables. See detailed configuration guide:
+- [AI Configuration Documentation](app/src-tauri/AI_CONFIGURATION.md)
+- [.env.example template](app/src-tauri/.env.example)
+
+**Quick setup:**
+```bash
+cd app/src-tauri
+cp .env.example .env
+# Edit .env to customize AI settings
 ```
 
 ## Build
