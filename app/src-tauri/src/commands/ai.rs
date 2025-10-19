@@ -22,6 +22,8 @@ pub struct DetectIntentResponse {
 #[derive(Debug, Deserialize)]
 pub struct ExecuteAiRequest {
     pub prompt: String,
+    pub headers: Vec<String>,
+    pub rows: Vec<Vec<String>>,
     pub max_rows: Option<usize>, // Limit data sent for processing
 }
 
@@ -101,24 +103,66 @@ pub async fn ai_detect_intent(
 
 /// Stage 2: Execute the AI operation with relevant data
 /// Only the necessary data is loaded based on detected intent
-/// Note: This is a simplified implementation that doesn't use state
-/// In a full implementation, we'd load CSV data from the state
 #[tauri::command]
 pub async fn ai_execute(
     request: ExecuteAiRequest,
 ) -> Result<ExecuteAiResponse, String> {
     let assistant = AiAssistant::new();
 
+    // Check if CSV data is provided
+    if request.headers.is_empty() || request.rows.is_empty() {
+        return Ok(ExecuteAiResponse::Error {
+            message: "No CSV data loaded. Please open a CSV file first.".to_string(),
+        });
+    }
+
     // Step 1: Detect intent
     let intent = assistant
         .detect_intent(&request.prompt).await
         .map_err(|e| format!("Failed to detect intent: {}", e))?;
 
-    // For now, return error message instructing to load CSV data
-    // In production, this would integrate with the state management
-    Ok(ExecuteAiResponse::Error {
-        message: "AI execution requires integration with CSV data state. This is a prototype implementation demonstrating the 2-stage AI architecture (intent detection → execution).".to_string(),
-    })
+    // Step 2: Limit rows based on config and request
+    let max_rows = request.max_rows.unwrap_or(10000);
+    let row_limit = max_rows.min(request.rows.len());
+    let limited_rows = &request.rows[..row_limit];
+
+    // Step 3: Execute the intent
+    match assistant.execute_intent(&intent, &request.headers, limited_rows) {
+        Ok(crate::ai::AiResponse::Analysis { summary, details, .. }) => {
+            Ok(ExecuteAiResponse::Analysis {
+                summary,
+                details: serde_json::to_value(details).unwrap(),
+            })
+        }
+        Ok(crate::ai::AiResponse::Transformation { changes, preview }) => {
+            let preview_with_names: Vec<ChangePreview> = preview
+                .iter()
+                .map(|p| {
+                    let column_name = request.headers
+                        .get(p.column_index)
+                        .cloned()
+                        .unwrap_or_else(|| format!("Column {}", p.column_index));
+
+                    ChangePreview {
+                        row_index: p.row_index,
+                        column_index: p.column_index,
+                        column_name,
+                        old_value: p.old_value.clone(),
+                        new_value: p.new_value.clone(),
+                    }
+                })
+                .collect();
+
+            Ok(ExecuteAiResponse::Transformation {
+                summary: format!("Found {} change(s)", changes.len()),
+                change_count: changes.len(),
+                preview: preview_with_names,
+            })
+        }
+        Err(e) => Ok(ExecuteAiResponse::Error {
+            message: format!("Execution failed: {}", e),
+        }),
+    }
 }
 
 /// Apply transformation changes to the CSV data

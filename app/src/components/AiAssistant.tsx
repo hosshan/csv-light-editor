@@ -2,8 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
 import { Button } from './ui/Button';
 import { Input } from './ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Loader2, Send, Bot, User, CheckCircle2 } from 'lucide-react';
 import { useCsvStore } from '../store/csvStore';
@@ -26,18 +24,20 @@ interface ChangePreview {
 }
 
 export function AiAssistant() {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { data } = useCsvStore();
+  const { data, aiMessages, aiPendingChanges, addAiMessage, setAiPendingChanges } = useCsvStore();
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // Smooth scroll to bottom when messages change
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
     }
-  }, [messages]);
+  }, [aiMessages]);
 
   const addMessage = (role: 'user' | 'assistant', content: string, type?: string, data?: any) => {
     const message: Message = {
@@ -48,7 +48,7 @@ export function AiAssistant() {
       type: type as any,
       data,
     };
-    setMessages(prev => [...prev, message]);
+    addAiMessage(message);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,6 +70,8 @@ export function AiAssistant() {
       const response = await invoke('ai_execute', {
         request: {
           prompt: userPrompt,
+          headers: data.headers,
+          rows: data.rows,
           max_rows: 10000,
         },
       }) as any;
@@ -84,7 +86,7 @@ export function AiAssistant() {
           'transformation',
           { preview, change_count: response.change_count }
         );
-        setPendingChanges(response);
+        setAiPendingChanges(response);
       } else if (response.type === 'Error') {
         addMessage('assistant', response.message, 'error');
       }
@@ -97,7 +99,7 @@ export function AiAssistant() {
   };
 
   const handleApplyChanges = async () => {
-    if (!pendingChanges) return;
+    if (!aiPendingChanges || !data) return;
 
     setIsProcessing(true);
     try {
@@ -105,7 +107,9 @@ export function AiAssistant() {
       // For now, we'll re-execute to get all changes
       const response = await invoke('ai_execute', {
         request: {
-          prompt: messages[messages.length - 2].content, // Get the user's last prompt
+          prompt: aiMessages[aiMessages.length - 2].content, // Get the user's last prompt
+          headers: data.headers,
+          rows: data.rows,
           max_rows: 10000,
         },
       }) as any;
@@ -115,7 +119,7 @@ export function AiAssistant() {
         // Note: The backend returns preview, but we need all changes
         // This would require a separate endpoint to get all changes
         addMessage('assistant', 'Changes applied successfully! The data has been updated.', 'analysis');
-        setPendingChanges(null);
+        setAiPendingChanges(null);
 
         // Refresh the CSV data
         // TODO: Add a refresh mechanism to update the UI
@@ -210,21 +214,21 @@ export function AiAssistant() {
   };
 
   return (
-    <Card className="flex flex-col h-full">
-      <CardHeader className="border-b">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Bot className="w-5 h-5" />
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      <div className="flex-shrink-0 border-b px-4 py-3 bg-background">
+        <div className="text-sm font-semibold flex items-center gap-2">
+          <Bot className="w-4 h-4" />
           AI Assistant
-        </CardTitle>
+        </div>
         <p className="text-xs text-muted-foreground mt-1">
           Ask questions about your data or request transformations
         </p>
-      </CardHeader>
+      </div>
 
-      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+      <div className="flex-1 overflow-hidden flex flex-col">
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-          {messages.length === 0 && (
+        <div className="flex-1 overflow-y-scroll overflow-x-hidden p-4 pb-6" style={{ height: 0 }} ref={scrollRef}>
+          {aiMessages.length === 0 && (
             <div className="h-full flex flex-col items-center justify-center text-center p-4">
               <Bot className="w-12 h-12 text-muted-foreground mb-3" />
               <h3 className="font-medium mb-2">Welcome to AI Assistant</h3>
@@ -248,7 +252,7 @@ export function AiAssistant() {
             </div>
           )}
 
-          {messages.map(renderMessage)}
+          {aiMessages.map(renderMessage)}
 
           {isProcessing && (
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -256,11 +260,11 @@ export function AiAssistant() {
               <span>Processing...</span>
             </div>
           )}
-        </ScrollArea>
+        </div>
 
         {/* Action buttons for transformations */}
-        {pendingChanges && (
-          <div className="border-t p-3 bg-muted/50">
+        {aiPendingChanges && (
+          <div className="flex-shrink-0 border-t p-3 bg-muted/50">
             <div className="flex gap-2">
               <Button
                 onClick={handleApplyChanges}
@@ -272,7 +276,7 @@ export function AiAssistant() {
                 Apply Changes
               </Button>
               <Button
-                onClick={() => setPendingChanges(null)}
+                onClick={() => setAiPendingChanges(null)}
                 disabled={isProcessing}
                 variant="outline"
                 size="sm"
@@ -284,7 +288,7 @@ export function AiAssistant() {
         )}
 
         {/* Input */}
-        <div className="border-t p-3">
+        <div className="flex-shrink-0 border-t p-3">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <Input
               value={input}
@@ -302,7 +306,7 @@ export function AiAssistant() {
             </Button>
           </form>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

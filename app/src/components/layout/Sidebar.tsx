@@ -8,9 +8,10 @@ export function Sidebar() {
   const { data, filters, sorts } = useCsvStore();
 
   return (
-    <div className="w-80 bg-muted/50 border-r border-border flex flex-col">
-      <Tabs defaultValue="info" className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-2 m-2">
+    <div className="w-80 bg-muted/50 border-r border-border flex flex-col h-screen">
+      <Tabs defaultValue="info" className="flex-1 flex flex-col min-h-0">
+        <div className="px-2 py-2 flex-shrink-0">
+          <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="info" className="text-xs">
             <FileText className="h-3 w-3 mr-1" />
             Info
@@ -20,8 +21,9 @@ export function Sidebar() {
             AI
           </TabsTrigger>
         </TabsList>
+        </div>
 
-        <TabsContent value="info" className="flex-1 overflow-y-auto m-0">
+        <TabsContent value="info" className="flex-1 overflow-y-auto m-0 min-h-0">
           {!data ? (
             <div className="p-4">
               <div className="text-sm text-muted-foreground text-center">
@@ -33,7 +35,7 @@ export function Sidebar() {
           )}
         </TabsContent>
 
-        <TabsContent value="ai" className="flex-1 overflow-hidden m-0 p-2">
+        <TabsContent value="ai" className="flex-1 m-0 p-0 min-h-0 flex flex-col">
           <AiAssistant />
         </TabsContent>
       </Tabs>
