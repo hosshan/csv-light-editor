@@ -1,15 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { useCsvStore } from '../../store/csvStore';
-import { cn } from '../../lib/utils';
-import { ColumnMenu } from '../ColumnMenu';
-import { RowMenu } from '../RowMenu';
-import { ColumnResizeHandle } from './ColumnResizeHandle';
-import { DragHandle } from './DragHandle';
-import { DropZoneIndicator } from './DropZoneIndicator';
-import { FilterBar } from '../filtering/FilterBar';
-import { useDragAndDrop } from '../../hooks/useDragAndDrop';
-import styles from './CsvTable.module.css';
+import React, { useEffect, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useCsvStore } from "../../store/csvStore";
+import { cn } from "../../lib/utils";
+import { ColumnMenu } from "../ColumnMenu";
+import { RowMenu } from "../RowMenu";
+import { ColumnResizeHandle } from "./ColumnResizeHandle";
+import { DragHandle } from "./DragHandle";
+import { DropZoneIndicator } from "./DropZoneIndicator";
+import { FilterBar } from "../filtering/FilterBar";
+import { useDragAndDrop } from "../../hooks/useDragAndDrop";
+import styles from "./CsvTable.module.css";
 
 export function CsvTable() {
   const {
@@ -52,10 +52,10 @@ export function CsvTable() {
     getFilteredData,
     searchResults,
     currentSearchIndex,
-    setScrollToCell
+    setScrollToCell,
   } = useCsvStore();
 
-  const [editValue, setEditValue] = useState('');
+  const [editValue, setEditValue] = useState("");
 
   const parentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -65,8 +65,8 @@ export function CsvTable() {
 
   // Drag and drop functionality
   const { dragState, handlers } = useDragAndDrop({
-    onMove: (fromIndex: number, toIndex: number, type: 'row' | 'column') => {
-      if (type === 'row') {
+    onMove: (fromIndex: number, toIndex: number, type: "row" | "column") => {
+      if (type === "row") {
         moveRow(fromIndex, toIndex);
       } else {
         moveColumn(fromIndex, toIndex);
@@ -81,9 +81,9 @@ export function CsvTable() {
     estimateSize: () => 35,
     overscan: 15, // Increased overscan for smoother scrolling
     measureElement:
-      typeof window !== 'undefined' &&
-      navigator.userAgent.indexOf('Firefox') === -1
-        ? element => element?.getBoundingClientRect().height
+      typeof window !== "undefined" &&
+      navigator.userAgent.indexOf("Firefox") === -1
+        ? (element) => element?.getBoundingClientRect().height
         : undefined,
   });
 
@@ -95,9 +95,9 @@ export function CsvTable() {
     overscan: 8, // Increased overscan for horizontal scrolling
     horizontal: true,
     measureElement:
-      typeof window !== 'undefined' &&
-      navigator.userAgent.indexOf('Firefox') === -1
-        ? element => element?.getBoundingClientRect().width
+      typeof window !== "undefined" &&
+      navigator.userAgent.indexOf("Firefox") === -1
+        ? (element) => element?.getBoundingClientRect().width
         : undefined,
   });
 
@@ -122,17 +122,16 @@ export function CsvTable() {
       }
     };
 
-    scrollElement.addEventListener('scroll', handleScroll);
+    scrollElement.addEventListener("scroll", handleScroll);
 
     return () => {
-      scrollElement.removeEventListener('scroll', handleScroll);
+      scrollElement.removeEventListener("scroll", handleScroll);
     };
   }, []);
 
-
   useEffect(() => {
     if (editingCell && data) {
-      const cellValue = data.rows[editingCell.row]?.[editingCell.column] || '';
+      const cellValue = data.rows[editingCell.row]?.[editingCell.column] || "";
       setEditValue(cellValue);
     }
   }, [editingCell, data]);
@@ -142,14 +141,14 @@ export function CsvTable() {
     const scrollCallback = (row: number, column: number) => {
       // Scroll to row
       rowVirtualizer.scrollToIndex(row, {
-        align: 'center',
-        behavior: 'smooth',
+        align: "center",
+        behavior: "smooth",
       });
 
       // Scroll to column
       columnVirtualizer.scrollToIndex(column, {
-        align: 'center',
-        behavior: 'smooth',
+        align: "center",
+        behavior: "smooth",
       });
     };
 
@@ -161,16 +160,38 @@ export function CsvTable() {
     };
   }, [rowVirtualizer, columnVirtualizer, setScrollToCell]);
 
-  const handleCellClick = (row: number, column: number, event?: React.MouseEvent) => {
+  const handleCellClick = (
+    row: number,
+    column: number,
+    event?: React.MouseEvent
+  ) => {
     if (!data) return;
 
-    const cell = { row, column, value: data.rows[row]?.[column] || '' };
+    const cell = { row, column, value: data.rows[row]?.[column] || "" };
 
     // Handle shift+click for range selection
     if (event?.shiftKey) {
       extendSelection(cell);
     } else {
       selectCell(cell);
+    }
+
+    // Return focus to parent element to prevent blue focus outline
+    setTimeout(() => {
+      parentRef.current?.focus();
+    }, 0);
+  };
+
+  const handleCellMouseDown = (e: React.MouseEvent) => {
+    // Prevent default focus behavior on cell click
+    // This prevents the blue focus outline from appearing
+    // We don't preventDefault() here to ensure onClick still fires
+    // Instead, we'll return focus to parent in handleCellClick
+    if (e.button === 0) {
+      // Keep focus on parent element to avoid blue outline on cells
+      if (parentRef.current && document.activeElement !== parentRef.current) {
+        parentRef.current.focus();
+      }
     }
   };
 
@@ -180,7 +201,10 @@ export function CsvTable() {
     selectRow(rowIndex);
   };
 
-  const handleColumnHeaderClick = (columnIndex: number, event?: React.MouseEvent) => {
+  const handleColumnHeaderClick = (
+    columnIndex: number,
+    event?: React.MouseEvent
+  ) => {
     event?.preventDefault();
     event?.stopPropagation();
     selectColumn(columnIndex);
@@ -189,7 +213,7 @@ export function CsvTable() {
   const handleCellDoubleClick = (row: number, column: number) => {
     if (!data) return;
 
-    const cell = { row, column, value: data.rows[row]?.[column] || '' };
+    const cell = { row, column, value: data.rows[row]?.[column] || "" };
     startEditing(cell);
   };
 
@@ -197,7 +221,7 @@ export function CsvTable() {
     if (!data || editingCell) return;
 
     // Handle Ctrl+A for select all
-    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+    if ((e.ctrlKey || e.metaKey) && e.key === "a") {
       e.preventDefault();
       selectAll();
       return;
@@ -206,19 +230,21 @@ export function CsvTable() {
     // Handle clipboard and history operations
     if (e.ctrlKey || e.metaKey) {
       switch (e.key) {
-        case 'c':
+        case "c":
           e.preventDefault();
-          copySelection();
+          copySelection().catch((error) => {
+            console.error("Failed to copy selection:", error);
+          });
           return;
-        case 'x':
+        case "x":
           e.preventDefault();
           cutSelection();
           return;
-        case 'v':
+        case "v":
           e.preventDefault();
           paste();
           return;
-        case 'z':
+        case "z":
           e.preventDefault();
           if (e.shiftKey) {
             // Cmd+Shift+Z for Redo
@@ -256,39 +282,44 @@ export function CsvTable() {
 
     // Handle shift+arrow keys for range selection
     if (e.shiftKey) {
-      let extendToCell: { row: number; column: number; value: string } | null = null;
+      let extendToCell: { row: number; column: number; value: string } | null =
+        null;
 
       switch (e.key) {
-        case 'ArrowUp':
+        case "ArrowUp":
           e.preventDefault();
           extendToCell = {
             row: Math.max(0, row - 1),
             column,
-            value: data.rows[Math.max(0, row - 1)]?.[column] || ''
+            value: data.rows[Math.max(0, row - 1)]?.[column] || "",
           };
           break;
-        case 'ArrowDown':
+        case "ArrowDown":
           e.preventDefault();
           extendToCell = {
             row: Math.min(data.rows.length - 1, row + 1),
             column,
-            value: data.rows[Math.min(data.rows.length - 1, row + 1)]?.[column] || ''
+            value:
+              data.rows[Math.min(data.rows.length - 1, row + 1)]?.[column] ||
+              "",
           };
           break;
-        case 'ArrowLeft':
+        case "ArrowLeft":
           e.preventDefault();
           extendToCell = {
             row,
             column: Math.max(0, column - 1),
-            value: data.rows[row]?.[Math.max(0, column - 1)] || ''
+            value: data.rows[row]?.[Math.max(0, column - 1)] || "",
           };
           break;
-        case 'ArrowRight':
+        case "ArrowRight":
           e.preventDefault();
           extendToCell = {
             row,
             column: Math.min(data.headers.length - 1, column + 1),
-            value: data.rows[row]?.[Math.min(data.headers.length - 1, column + 1)] || ''
+            value:
+              data.rows[row]?.[Math.min(data.headers.length - 1, column + 1)] ||
+              "",
           };
           break;
       }
@@ -302,19 +333,19 @@ export function CsvTable() {
     // Handle Command/Ctrl + Arrow keys for jumping to edges
     if (e.metaKey || e.ctrlKey) {
       switch (e.key) {
-        case 'ArrowUp':
+        case "ArrowUp":
           e.preventDefault();
           newRow = 0; // Jump to first row
           break;
-        case 'ArrowDown':
+        case "ArrowDown":
           e.preventDefault();
           newRow = data.rows.length - 1; // Jump to last row
           break;
-        case 'ArrowLeft':
+        case "ArrowLeft":
           e.preventDefault();
           newColumn = 0; // Jump to first column
           break;
-        case 'ArrowRight':
+        case "ArrowRight":
           e.preventDefault();
           newColumn = data.headers.length - 1; // Jump to last column
           break;
@@ -325,31 +356,31 @@ export function CsvTable() {
     } else {
       // Normal navigation
       switch (e.key) {
-        case 'ArrowUp':
+        case "ArrowUp":
           e.preventDefault();
           newRow = Math.max(0, row - 1);
           break;
-        case 'ArrowDown':
+        case "ArrowDown":
           e.preventDefault();
           newRow = Math.min(data.rows.length - 1, row + 1);
           break;
-        case 'ArrowLeft':
+        case "ArrowLeft":
           e.preventDefault();
           newColumn = Math.max(0, column - 1);
           break;
-        case 'ArrowRight':
+        case "ArrowRight":
           e.preventDefault();
           newColumn = Math.min(data.headers.length - 1, column + 1);
           break;
-        case 'Enter':
-        case 'F2':
+        case "Enter":
+        case "F2":
           e.preventDefault();
           if (selectedCell) {
             startEditing(selectedCell);
           }
           return;
-        case 'Delete':
-        case 'Backspace':
+        case "Delete":
+        case "Backspace":
           e.preventDefault();
           deleteSelection();
           return;
@@ -360,7 +391,7 @@ export function CsvTable() {
       const newCell = {
         row: newRow,
         column: newColumn,
-        value: data.rows[newRow]?.[newColumn] || ''
+        value: data.rows[newRow]?.[newColumn] || "",
       };
       selectCell(newCell);
 
@@ -368,19 +399,25 @@ export function CsvTable() {
       requestAnimationFrame(() => {
         // Scroll row into view
         const scrollToRowIndex = newRow;
-        if (scrollToRowIndex >= 0 && scrollToRowIndex < (data?.rows.length || 0)) {
+        if (
+          scrollToRowIndex >= 0 &&
+          scrollToRowIndex < (data?.rows.length || 0)
+        ) {
           rowVirtualizer.scrollToIndex(scrollToRowIndex, {
-            align: 'auto',
-            behavior: 'smooth'
+            align: "auto",
+            behavior: "smooth",
           });
         }
 
         // Scroll column into view
         const scrollToColumnIndex = newColumn;
-        if (scrollToColumnIndex >= 0 && scrollToColumnIndex < (data?.headers.length || 0)) {
+        if (
+          scrollToColumnIndex >= 0 &&
+          scrollToColumnIndex < (data?.headers.length || 0)
+        ) {
           columnVirtualizer.scrollToIndex(scrollToColumnIndex, {
-            align: 'auto',
-            behavior: 'smooth'
+            align: "auto",
+            behavior: "smooth",
           });
         }
       });
@@ -388,7 +425,7 @@ export function CsvTable() {
   };
 
   const handleEditKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       if (editingCell) {
         updateCell(editingCell, editValue);
@@ -397,7 +434,7 @@ export function CsvTable() {
           const nextCell = {
             row: editingCell.row + 1,
             column: editingCell.column,
-            value: data.rows[editingCell.row + 1]?.[editingCell.column] || ''
+            value: data.rows[editingCell.row + 1]?.[editingCell.column] || "",
           };
           selectCell(nextCell);
         }
@@ -406,7 +443,7 @@ export function CsvTable() {
           parentRef.current?.focus();
         }, 0);
       }
-    } else if (e.key === 'Tab') {
+    } else if (e.key === "Tab") {
       e.preventDefault();
       if (editingCell) {
         updateCell(editingCell, editValue);
@@ -415,7 +452,7 @@ export function CsvTable() {
           const nextCell = {
             row: editingCell.row,
             column: editingCell.column + 1,
-            value: data.rows[editingCell.row]?.[editingCell.column + 1] || ''
+            value: data.rows[editingCell.row]?.[editingCell.column + 1] || "",
           };
           selectCell(nextCell);
         }
@@ -424,7 +461,7 @@ export function CsvTable() {
           parentRef.current?.focus();
         }, 0);
       }
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       // Cancel editing without saving
       stopEditing();
       // Return focus to table for arrow key navigation
@@ -433,7 +470,6 @@ export function CsvTable() {
       }, 0);
     }
   };
-
 
   if (!data) {
     return (
@@ -447,8 +483,13 @@ export function CsvTable() {
   }
 
   // Safety check for data structure
-  if (!data.rows || !data.headers || !Array.isArray(data.rows) || !Array.isArray(data.headers)) {
-    console.error('Invalid CSV data structure:', data);
+  if (
+    !data.rows ||
+    !data.headers ||
+    !Array.isArray(data.rows) ||
+    !Array.isArray(data.headers)
+  ) {
+    console.error("Invalid CSV data structure:", data);
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
         <div className="text-center text-destructive">
@@ -461,10 +502,10 @@ export function CsvTable() {
 
   // Debug logging
   useEffect(() => {
-    console.log('CsvTable Debug:', {
+    console.log("CsvTable Debug:", {
       dataLength: data?.rows.length || 0,
       headersLength: data?.headers.length || 0,
-      hasData: !!data
+      hasData: !!data,
     });
   }, [data]);
 
@@ -500,18 +541,19 @@ export function CsvTable() {
             ref={headerRef}
             className="flex relative overflow-x-hidden flex-1"
             style={{
-              height: '40px',
+              height: "40px",
             }}
           >
             <div
               className="relative"
               style={{
                 width: columnVirtualizer.getTotalSize(),
-                height: '40px',
+                height: "40px",
               }}
             >
               {columnVirtualizer.getVirtualItems().map((virtualColumn) => {
-                const isColumnSelected = selectedRange?.type === 'column' &&
+                const isColumnSelected =
+                  selectedRange?.type === "column" &&
                   selectedRange.startColumn <= virtualColumn.index &&
                   selectedRange.endColumn >= virtualColumn.index;
 
@@ -521,15 +563,15 @@ export function CsvTable() {
                     className={cn(
                       "border-r border-border bg-muted/80 flex items-center px-2 text-xs font-medium truncate cursor-pointer hover:bg-accent transition-colors relative overflow-visible",
                       {
-                        'bg-primary/20 border-primary': isColumnSelected
+                        "bg-primary/20 border-primary": isColumnSelected,
                       }
                     )}
                     style={{
-                      position: 'absolute',
+                      position: "absolute",
                       top: 0,
                       left: 0,
                       width: virtualColumn.size,
-                      height: '40px',
+                      height: "40px",
                       transform: `translateX(${virtualColumn.start}px)`,
                     }}
                     onMouseDown={(e) => {
@@ -541,25 +583,37 @@ export function CsvTable() {
                       e.stopPropagation();
                       handleColumnHeaderClick(virtualColumn.index, e);
                     }}
-                    onDragOver={(e) => handlers.onDragOver(virtualColumn.index, e)}
+                    onDragOver={(e) =>
+                      handlers.onDragOver(virtualColumn.index, e)
+                    }
                     onDragLeave={handlers.onDragLeave}
                     onDragEnter={(e) => e.preventDefault()}
                   >
                     <DragHandle
                       type="column"
                       index={virtualColumn.index}
-                      isDragging={dragState.draggedIndex === virtualColumn.index && dragState.draggedType === 'column'}
-                      isDropTarget={dragState.dropTargetIndex === virtualColumn.index && dragState.draggedType === 'column'}
+                      isDragging={
+                        dragState.draggedIndex === virtualColumn.index &&
+                        dragState.draggedType === "column"
+                      }
+                      isDropTarget={
+                        dragState.dropTargetIndex === virtualColumn.index &&
+                        dragState.draggedType === "column"
+                      }
                       onDragStart={handlers.onDragStart}
                       onDragEnd={handlers.onDragEnd}
                       className="w-4 h-full mr-1"
                     />
                     <span className="flex-1 truncate">
-                      {displayData?.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
+                      {displayData?.headers[virtualColumn.index] ||
+                        `Column ${virtualColumn.index + 1}`}
                     </span>
                     <ColumnMenu
                       columnIndex={virtualColumn.index}
-                      columnName={displayData?.headers[virtualColumn.index] || `Column ${virtualColumn.index + 1}`}
+                      columnName={
+                        displayData?.headers[virtualColumn.index] ||
+                        `Column ${virtualColumn.index + 1}`
+                      }
                       onAddColumn={(position) => {
                         addColumn(position, virtualColumn.index);
                       }}
@@ -578,7 +632,10 @@ export function CsvTable() {
                     <DropZoneIndicator
                       type="column"
                       position="before"
-                      isVisible={dragState.dropTargetIndex === virtualColumn.index && dragState.draggedType === 'column'}
+                      isVisible={
+                        dragState.dropTargetIndex === virtualColumn.index &&
+                        dragState.draggedType === "column"
+                      }
                     />
                   </div>
                 );
@@ -593,7 +650,8 @@ export function CsvTable() {
         ref={parentRef}
         className={cn(
           "flex-1 overflow-auto focus:outline-none scroll-smooth",
-          styles.scrollContainer
+          styles.scrollContainer,
+          styles.noFocusOutline
         )}
         tabIndex={0}
         onKeyDown={handleKeyDown}
@@ -602,8 +660,8 @@ export function CsvTable() {
           style={{
             height: rowVirtualizer.getTotalSize(),
             width: columnVirtualizer.getTotalSize() + 48,
-            position: 'relative',
-            minWidth: '100%',
+            position: "relative",
+            minWidth: "100%",
           }}
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => (
@@ -625,13 +683,14 @@ export function CsvTable() {
                   className={cn(
                     "w-12 border-r border-b border-border bg-muted/50 flex items-center justify-center text-xs text-muted-foreground cursor-pointer hover:bg-accent transition-colors",
                     {
-                      'bg-primary/20 border-primary': selectedRange?.type === 'row' &&
+                      "bg-primary/20 border-primary":
+                        selectedRange?.type === "row" &&
                         selectedRange.startRow <= virtualRow.index &&
-                        selectedRange.endRow >= virtualRow.index
+                        selectedRange.endRow >= virtualRow.index,
                     }
                   )}
                   style={{
-                    position: 'absolute',
+                    position: "absolute",
                     top: 0,
                     left: 0,
                     height: virtualRow.size,
@@ -653,74 +712,130 @@ export function CsvTable() {
                   <DragHandle
                     type="row"
                     index={virtualRow.index}
-                    isDragging={dragState.draggedIndex === virtualRow.index && dragState.draggedType === 'row'}
-                    isDropTarget={dragState.dropTargetIndex === virtualRow.index && dragState.draggedType === 'row'}
+                    isDragging={
+                      dragState.draggedIndex === virtualRow.index &&
+                      dragState.draggedType === "row"
+                    }
+                    isDropTarget={
+                      dragState.dropTargetIndex === virtualRow.index &&
+                      dragState.draggedType === "row"
+                    }
                     onDragStart={handlers.onDragStart}
                     onDragEnd={handlers.onDragEnd}
                     className="w-3 h-4 mb-1"
                   />
-                  <span className="text-xs">
-                    {virtualRow.index + 1}
-                  </span>
+                  <span className="text-xs">{virtualRow.index + 1}</span>
                   <DropZoneIndicator
                     type="row"
                     position="before"
-                    isVisible={dragState.dropTargetIndex === virtualRow.index && dragState.draggedType === 'row'}
+                    isVisible={
+                      dragState.dropTargetIndex === virtualRow.index &&
+                      dragState.draggedType === "row"
+                    }
                   />
                 </div>
               </RowMenu>
 
               {/* Data cells */}
               {columnVirtualizer.getVirtualItems().map((virtualColumn) => {
-                const cellValue = displayData?.rows[virtualRow.index]?.[virtualColumn.index] || '';
-                const isSelected = selectedCell?.row === virtualRow.index && selectedCell?.column === virtualColumn.index;
-                const isEditing = editingCell?.row === virtualRow.index && editingCell?.column === virtualColumn.index;
+                const cellValue =
+                  displayData?.rows[virtualRow.index]?.[virtualColumn.index] ||
+                  "";
+                const isSelected =
+                  selectedCell?.row === virtualRow.index &&
+                  selectedCell?.column === virtualColumn.index;
+                const isEditing =
+                  editingCell?.row === virtualRow.index &&
+                  editingCell?.column === virtualColumn.index;
 
                 // Check if cell is in selected range
-                const isInRange = selectedRange &&
+                // Only apply range selection logic when type is 'range'
+                const isInRange =
+                  selectedRange?.type === "range" &&
                   virtualRow.index >= selectedRange.startRow &&
                   virtualRow.index <= selectedRange.endRow &&
                   virtualColumn.index >= selectedRange.startColumn &&
                   virtualColumn.index <= selectedRange.endColumn;
 
+                // Check if cell is in selected row (when type is 'row')
+                const isInSelectedRow =
+                  selectedRange?.type === "row" &&
+                  virtualRow.index >= selectedRange.startRow &&
+                  virtualRow.index <= selectedRange.endRow;
+
+                // Check if cell is in selected column (when type is 'column')
+                const isInSelectedColumn =
+                  selectedRange?.type === "column" &&
+                  virtualColumn.index >= selectedRange.startColumn &&
+                  virtualColumn.index <= selectedRange.endColumn;
+
                 // Check if this is the focus cell (active end of selection)
-                const isFocusCell = selectedRange &&
+                const isFocusCell =
+                  selectedRange?.type === "range" &&
                   selectedRange.focusRow === virtualRow.index &&
                   selectedRange.focusColumn === virtualColumn.index;
 
                 // Check if cell is in search results (only if there are results)
                 const hasSearchResults = searchResults.length > 0;
-                const searchResultIndex = hasSearchResults ? searchResults.findIndex(
-                  result => result.row === virtualRow.index && result.column === virtualColumn.index
-                ) : -1;
+                const searchResultIndex = hasSearchResults
+                  ? searchResults.findIndex(
+                      (result) =>
+                        result.row === virtualRow.index &&
+                        result.column === virtualColumn.index
+                    )
+                  : -1;
                 const isSearchResult = searchResultIndex !== -1;
-                const isCurrentSearchResult = hasSearchResults && searchResultIndex === currentSearchIndex;
+                const isCurrentSearchResult =
+                  hasSearchResults && searchResultIndex === currentSearchIndex;
 
                 return (
                   <div
                     key={`${virtualRow.index}-${virtualColumn.index}`}
                     className={cn(
-                      'border-r border-b border-border bg-background flex items-center px-2 text-sm cursor-cell transition-colors hover:bg-accent',
+                      "border-r border-b border-border bg-background flex items-center px-2 text-sm cursor-cell transition-colors hover:bg-accent outline-none",
                       {
-                        'bg-primary/10 border-primary border-2 z-10': isSelected && !isEditing && !isCurrentSearchResult,
-                        'bg-accent border-primary border-2 z-20 ring-2 ring-primary/50': isEditing,
-                        'bg-primary/5': isInRange && !isSelected && !isEditing && !isFocusCell && !isSearchResult,
-                        'bg-primary/15 border-primary/50 border-2 z-15': isFocusCell && !isEditing && !isCurrentSearchResult,
-                        'bg-yellow-200 border-yellow-400 border-2 z-[5]': isSearchResult && !isCurrentSearchResult && !isEditing,
-                        'bg-orange-300 border-orange-500 border-2 z-[30] ring-2 ring-orange-400': isCurrentSearchResult && !isEditing,
+                        "bg-primary/10 border-primary border-2 z-10":
+                          isSelected && !isEditing && !isCurrentSearchResult,
+                        "bg-accent border-primary border-2 z-20 ring-2 ring-primary/50":
+                          isEditing,
+                        "bg-primary/5":
+                          (isInRange ||
+                            isInSelectedRow ||
+                            isInSelectedColumn) &&
+                          !isSelected &&
+                          !isEditing &&
+                          !isFocusCell &&
+                          !isSearchResult,
+                        "bg-primary/15 border-primary/50 border-2 z-15":
+                          isFocusCell && !isEditing && !isCurrentSearchResult,
+                        "bg-yellow-200 border-yellow-400 border-2 z-[5]":
+                          isSearchResult &&
+                          !isCurrentSearchResult &&
+                          !isEditing,
+                        "bg-orange-300 border-orange-500 border-2 z-[30] ring-2 ring-orange-400":
+                          isCurrentSearchResult && !isEditing,
                       }
                     )}
                     style={{
-                      position: 'absolute',
+                      position: "absolute",
                       top: 0,
                       left: 48,
                       width: virtualColumn.size,
                       height: virtualRow.size,
                       transform: `translate(${virtualColumn.start}px, ${virtualRow.start}px)`,
-                      backfaceVisibility: 'hidden',
+                      backfaceVisibility: "hidden",
                     }}
-                    onClick={(e) => handleCellClick(virtualRow.index, virtualColumn.index, e)}
-                    onDoubleClick={() => handleCellDoubleClick(virtualRow.index, virtualColumn.index)}
+                    onMouseDown={handleCellMouseDown}
+                    onClick={(e) =>
+                      handleCellClick(virtualRow.index, virtualColumn.index, e)
+                    }
+                    onDoubleClick={() =>
+                      handleCellDoubleClick(
+                        virtualRow.index,
+                        virtualColumn.index
+                      )
+                    }
+                    tabIndex={-1}
                   >
                     {isEditing ? (
                       <input

@@ -947,3 +947,51 @@ pub async fn copy_to_clipboard(
 
     Ok(())
 }
+
+// Copy selection range to clipboard as TSV (Tab-Separated Values)
+// This format is compatible with spreadsheet applications like Excel, Numbers, and Google Sheets
+#[tauri::command]
+pub async fn copy_selection_to_clipboard(
+    selection: Vec<Vec<String>>,
+) -> Result<(), AppError> {
+    if selection.is_empty() {
+        return Ok(());
+    }
+
+    // Convert selection to TSV format (tab-separated, newline-separated rows)
+    let mut tsv_string = String::new();
+    for (row_idx, row) in selection.iter().enumerate() {
+        if row_idx > 0 {
+            tsv_string.push('\n');
+        }
+        for (col_idx, cell) in row.iter().enumerate() {
+            if col_idx > 0 {
+                tsv_string.push('\t');
+            }
+            // Escape special characters: replace newlines with spaces and tabs with spaces
+            // This ensures proper pasting into spreadsheet applications
+            let escaped_cell = cell
+                .replace("\n", " ")
+                .replace("\r", " ")
+                .replace("\t", " ");
+            tsv_string.push_str(&escaped_cell);
+        }
+    }
+
+    // Use copypasta for clipboard operations
+    use copypasta::{ClipboardContext, ClipboardProvider};
+    let mut clipboard = ClipboardContext::new()
+        .map_err(|e| AppError::new(
+            format!("Failed to access clipboard: {}", e),
+            "CLIPBOARD_ERROR",
+        ))?;
+
+    clipboard
+        .set_contents(tsv_string)
+        .map_err(|e| AppError::new(
+            format!("Failed to copy to clipboard: {}", e),
+            "CLIPBOARD_ERROR",
+        ))?;
+
+    Ok(())
+}

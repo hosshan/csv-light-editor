@@ -49,3 +49,33 @@
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
 }
+
+/* Remove focus outline completely */
+.noFocusOutline {
+  outline: none !important;
+}
+
+.noFocusOutline:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.noFocusOutline:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove focus outline from all cells */
+.scrollContainer > div > div > div {
+  outline: none !important;
+}
+
+.scrollContainer > div > div > div:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.scrollContainer > div > div > div:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}

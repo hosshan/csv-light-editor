@@ -109,6 +109,7 @@ fn main() {
             commands::csv::export_data,
             commands::csv::generate_export_preview,
             commands::csv::copy_to_clipboard,
+            commands::csv::copy_selection_to_clipboard,
             commands::settings::get_import_export_settings,
             commands::settings::update_import_export_settings,
             commands::settings::reset_import_export_settings,
