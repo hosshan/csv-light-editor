@@ -208,7 +208,9 @@ export function CsvTable() {
       switch (e.key) {
         case 'c':
           e.preventDefault();
-          copySelection();
+          copySelection().catch((error) => {
+            console.error('Failed to copy selection:', error);
+          });
           return;
         case 'x':
           e.preventDefault();

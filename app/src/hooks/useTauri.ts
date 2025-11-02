@@ -204,6 +204,15 @@ class TauriAPI {
       throw new Error(`Failed to open file in new window: ${error}`);
     }
   }
+
+  async copySelectionToClipboard(selection: string[][]): Promise<void> {
+    try {
+      await invoke('copy_selection_to_clipboard', { selection });
+    } catch (error) {
+      console.error('Failed to copy selection to clipboard:', error);
+      throw new Error(`Failed to copy selection to clipboard: ${error}`);
+    }
+  }
 }
 
 export const tauriAPI = new TauriAPI();

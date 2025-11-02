@@ -98,7 +98,7 @@ interface CsvState {
   moveColumn: (fromIndex: number, toIndex: number) => void;
 
   // Clipboard actions
-  copySelection: () => void;
+  copySelection: () => Promise<void>;
   cutSelection: () => void;
   paste: (targetCell?: CsvCell) => void;
   deleteSelection: () => void;
@@ -580,7 +580,7 @@ export const useCsvStore = create<CsvState>()(
       },
 
       // Clipboard operations
-      copySelection: () => {
+      copySelection: async () => {
         const state = get();
         if (!state.data) return;
 
@@ -601,14 +601,26 @@ export const useCsvStore = create<CsvState>()(
         }
 
         if (cellsToClip.length > 0) {
+          // Store in internal clipboard for app-internal paste operations
           set({ clipboard: cellsToClip });
+
+          // Also copy to system clipboard in TSV format for spreadsheet applications
+          try {
+            const { tauriAPI } = await import('../hooks/useTauri');
+            await tauriAPI.copySelectionToClipboard(cellsToClip);
+          } catch (error) {
+            console.error('Failed to copy to system clipboard:', error);
+            // Don't throw - internal clipboard still works for app-internal paste
+          }
         }
       },
 
       cutSelection: () => {
         const state = get();
-        // First copy the selection
-        state.copySelection();
+        // First copy the selection (async, but we don't wait for it)
+        state.copySelection().catch((error) => {
+          console.error('Failed to copy selection for cut:', error);
+        });
         // Then delete it
         state.deleteSelection();
       },
