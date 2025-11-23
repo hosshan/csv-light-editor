@@ -10,6 +10,7 @@ import { DropZoneIndicator } from "./DropZoneIndicator";
 import { FilterBar } from "../filtering/FilterBar";
 import { useDragAndDrop } from "../../hooks/useDragAndDrop";
 import { Button } from "../ui/Button";
+import { Input } from "../ui/input";
 import { Plus } from "lucide-react";
 import styles from "./CsvTable.module.css";
 
@@ -58,6 +59,11 @@ export function CsvTable() {
   } = useCsvStore();
 
   const [editValue, setEditValue] = useState("");
+  const [editingHeaderColumn, setEditingHeaderColumn] = useState<number | null>(
+    null
+  );
+  const [headerEditValue, setHeaderEditValue] = useState("");
+  const headerInputRef = useRef<HTMLInputElement>(null);
 
   const parentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -137,6 +143,14 @@ export function CsvTable() {
       setEditValue(cellValue);
     }
   }, [editingCell, data]);
+
+  // Focus and select text when header editing starts
+  useEffect(() => {
+    if (editingHeaderColumn !== null && headerInputRef.current) {
+      headerInputRef.current.focus();
+      headerInputRef.current.select();
+    }
+  }, [editingHeaderColumn]);
 
   // Register scroll callback for search navigation
   useEffect(() => {
@@ -631,6 +645,22 @@ export function CsvTable() {
                     }
                     onDragLeave={handlers.onDragLeave}
                     onDragEnter={(e) => e.preventDefault()}
+                    onDoubleClick={(e) => {
+                      // Don't start editing if clicking on drag handle or menu
+                      if (
+                        (e.target as Element).closest('[draggable="true"]') ||
+                        (e.target as Element).closest("button")
+                      ) {
+                        return;
+                      }
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const currentName =
+                        displayData?.headers[virtualColumn.index] ||
+                        `Column ${virtualColumn.index + 1}`;
+                      setHeaderEditValue(currentName);
+                      setEditingHeaderColumn(virtualColumn.index);
+                    }}
                   >
                     <DragHandle
                       type="column"
@@ -647,10 +677,48 @@ export function CsvTable() {
                       onDragEnd={handlers.onDragEnd}
                       className="w-4 h-full mr-1"
                     />
-                    <span className="flex-1 truncate">
-                      {displayData?.headers[virtualColumn.index] ||
-                        `Column ${virtualColumn.index + 1}`}
-                    </span>
+                    {editingHeaderColumn === virtualColumn.index ? (
+                      <Input
+                        ref={headerInputRef}
+                        value={headerEditValue}
+                        onChange={(e) => setHeaderEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (headerEditValue.trim()) {
+                              renameColumn(
+                                virtualColumn.index,
+                                headerEditValue.trim()
+                              );
+                            }
+                            setEditingHeaderColumn(null);
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setEditingHeaderColumn(null);
+                            setHeaderEditValue("");
+                          }
+                        }}
+                        onBlur={() => {
+                          if (headerEditValue.trim()) {
+                            renameColumn(
+                              virtualColumn.index,
+                              headerEditValue.trim()
+                            );
+                          }
+                          setEditingHeaderColumn(null);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-1 h-7 px-1 text-xs font-medium"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="flex-1 truncate">
+                        {displayData?.headers[virtualColumn.index] ||
+                          `Column ${virtualColumn.index + 1}`}
+                      </span>
+                    )}
                     <ColumnMenu
                       columnIndex={virtualColumn.index}
                       columnName={
