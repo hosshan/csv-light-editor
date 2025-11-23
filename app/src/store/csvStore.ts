@@ -111,7 +111,7 @@ interface CsvState {
   canRedo: () => boolean;
 
   // Row operations with history
-  addRow: (position: 'above' | 'below', rowIndex: number) => void;
+  addRow: (position: 'above' | 'below', rowIndex?: number) => void;
   deleteRow: (rowIndex: number) => void;
   duplicateRow: (rowIndex: number) => void;
 
@@ -815,7 +815,18 @@ export const useCsvStore = create<CsvState>()(
         const newRows = [...state.data.rows];
         const newRow = new Array(state.data.headers.length).fill('');
 
-        const insertIndex = position === 'above' ? rowIndex : rowIndex + 1;
+        // Handle empty table case
+        let insertIndex: number;
+        if (state.data.rows.length === 0) {
+          // If table is empty, always insert at index 0
+          insertIndex = 0;
+        } else if (rowIndex === undefined) {
+          // If rowIndex is not provided, append to the end
+          insertIndex = state.data.rows.length;
+        } else {
+          // Normal case: insert above or below the specified row
+          insertIndex = position === 'above' ? rowIndex : rowIndex + 1;
+        }
         newRows.splice(insertIndex, 0, newRow);
 
         const afterData = {
