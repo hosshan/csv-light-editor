@@ -390,9 +390,11 @@ function App() {
                   onClose={() => setIsSearchOpen(false)}
                   initialMode={searchMode}
                 />
-                <CsvTable />
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <CsvTable />
+                </div>
+                <SelectionStatistics />
               </div>
-              <SelectionStatistics />
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">

@@ -81,10 +81,6 @@ export const SelectionStatistics: React.FC = () => {
     };
   }, [data, selectedCell, selectedRange]);
 
-  if (!statistics || statistics.count === 0) {
-    return null;
-  }
-
   const formatNumber = (num: number): string => {
     // Format numbers with appropriate precision
     if (Number.isInteger(num)) {
@@ -98,36 +94,44 @@ export const SelectionStatistics: React.FC = () => {
   };
 
   return (
-    <div className="bg-muted/50 border-t border-border px-4 py-2 text-xs text-muted-foreground">
+    <div className="sticky bottom-0 z-10 bg-muted/50 border-t border-border px-4 py-2 text-xs text-muted-foreground shrink-0">
       <div className="flex items-center gap-6">
-        <span className="font-medium">
-          アイテム数: {statistics.count.toLocaleString()}
-        </span>
-
-        <span>
-          ユニーク数: {statistics.uniqueCount.toLocaleString()}
-        </span>
-
-        {statistics.hasNumericData && (
+        {statistics && statistics.count > 0 ? (
           <>
-            <span>
-              合計: {formatNumber(statistics.sum!)}
+            <span className="font-medium">
+              アイテム数: {statistics.count.toLocaleString()}
             </span>
-            <span>
-              最小: {formatNumber(statistics.min!)}
-            </span>
-            <span>
-              最大: {formatNumber(statistics.max!)}
-            </span>
-            <span>
-              平均: {formatNumber(statistics.average!)}
-            </span>
-          </>
-        )}
 
-        {!statistics.hasNumericData && statistics.count > 1 && (
+            <span>
+              ユニーク数: {statistics.uniqueCount.toLocaleString()}
+            </span>
+
+            {statistics.hasNumericData && (
+              <>
+                <span>
+                  合計: {formatNumber(statistics.sum!)}
+                </span>
+                <span>
+                  最小: {formatNumber(statistics.min!)}
+                </span>
+                <span>
+                  最大: {formatNumber(statistics.max!)}
+                </span>
+                <span>
+                  平均: {formatNumber(statistics.average!)}
+                </span>
+              </>
+            )}
+
+            {!statistics.hasNumericData && statistics.count > 1 && (
+              <span className="text-muted-foreground/70">
+                (数値データなし)
+              </span>
+            )}
+          </>
+        ) : (
           <span className="text-muted-foreground/70">
-            (数値データなし)
+            セルまたは範囲を選択すると統計情報が表示されます
           </span>
         )}
       </div>
