@@ -145,6 +145,7 @@ interface CsvState {
 
   markSaved: () => void;
   reset: () => void;
+  createNewCsv: () => void;
 }
 
 export const useCsvStore = create<CsvState>()(
@@ -1380,7 +1381,48 @@ export const useCsvStore = create<CsvState>()(
         currentSort: { columns: [] },
         aiMessages: [],
         aiPendingChanges: null
-      })
+      }),
+
+      createNewCsv: () => {
+        const newData: CsvData = {
+          headers: ['Column 1'],
+          rows: [['']], // デフォルトで1行を追加
+          metadata: {
+            filename: 'Untitled',
+            path: '',
+            rowCount: 1,
+            columnCount: 1,
+            hasHeaders: true,
+            delimiter: ',',
+            encoding: 'UTF-8',
+            fileSize: 0,
+            lastModified: new Date().toISOString()
+          }
+        };
+        const firstCell: CsvCell = {
+          row: 0,
+          column: 0,
+          value: ''
+        };
+        set({
+          data: newData,
+          currentFilePath: null,
+          error: null,
+          selectedCell: firstCell,
+          selectedRange: null,
+          editingCell: firstCell, // 最初のセルを編集モードにする
+          hasUnsavedChanges: true,
+          filters: [],
+          sorts: [],
+          currentSort: { columns: [] },
+          history: [],
+          historyIndex: -1,
+          searchResults: [],
+          currentSearchIndex: -1,
+          searchQuery: '',
+          columnWidths: {}
+        });
+      }
     }),
     { name: 'csv-store' }
   )

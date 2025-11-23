@@ -11,7 +11,8 @@ import {
   Shield,
   CheckSquare,
   BarChart3,
-  FileDown
+  FileDown,
+  FilePlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useCsvStore } from '../../store/csvStore';
@@ -28,9 +29,10 @@ interface ToolbarProps {
   onSave?: () => void;
   onSaveAs?: () => void;
   onOpenSearch?: () => void;
+  onNewCsv?: () => void;
 }
 
-export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
+export function Toolbar({ onSave, onSaveAs, onOpenSearch, onNewCsv }: ToolbarProps = {}) {
   const {
     data,
     currentFilePath,
@@ -92,6 +94,17 @@ export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
       <div className="flex items-center space-x-2">
         {/* File Operations */}
         <div className="flex items-center space-x-1 border-r border-border pr-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onNewCsv || (() => {})}
+            className="flex items-center space-x-1"
+            title="New CSV (⌘N)"
+          >
+            <FilePlus className="h-4 w-4" />
+            <span>New</span>
+          </Button>
+
           <Button
             variant="ghost"
             size="sm"
