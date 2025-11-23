@@ -1,55 +1,69 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Toolbar } from './components/layout/Toolbar';
-import { Sidebar } from './components/layout/Sidebar';
-import { CsvTable } from './components/csv/CsvTable';
-import { SaveDialog } from './components/SaveDialog';
-import { FileOpenDialog } from './components/FileOpenDialog';
-import { SelectionStatistics } from './components/SelectionStatistics';
-import { InlineSearchBar } from './components/InlineSearchBar';
-import { useCsvStore } from './store/csvStore';
-import { useTauri } from './hooks/useTauri';
-import { Loader2 } from 'lucide-react';
-import type { SaveOptions } from './hooks/useTauri';
-import { listen } from '@tauri-apps/api/event';
+import { useEffect, useState, useCallback } from "react";
+import { Toolbar } from "./components/layout/Toolbar";
+import { Sidebar } from "./components/layout/Sidebar";
+import { CsvTable } from "./components/csv/CsvTable";
+import { SaveDialog } from "./components/SaveDialog";
+import { FileOpenDialog } from "./components/FileOpenDialog";
+import { SelectionStatistics } from "./components/SelectionStatistics";
+import { InlineSearchBar } from "./components/InlineSearchBar";
+import { useCsvStore } from "./store/csvStore";
+import { useTauri } from "./hooks/useTauri";
+import { Loader2 } from "lucide-react";
+import type { SaveOptions } from "./hooks/useTauri";
+import { listen } from "@tauri-apps/api/event";
 
 function App() {
-  const { data, currentFilePath, hasUnsavedChanges, isLoading, error, setData, setCurrentFilePath, markSaved, setError } = useCsvStore();
+  const {
+    data,
+    currentFilePath,
+    hasUnsavedChanges,
+    isLoading,
+    error,
+    setData,
+    setCurrentFilePath,
+    markSaved,
+    setError,
+    createNewCsv,
+  } = useCsvStore();
   const tauriAPI = useTauri();
   const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [saveMode, setSaveMode] = useState<'save' | 'saveAs'>('save');
+  const [saveMode, setSaveMode] = useState<"save" | "saveAs">("save");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchMode, setSearchMode] = useState<'search' | 'replace'>('search');
+  const [searchMode, setSearchMode] = useState<"search" | "replace">("search");
   const [showFileOpenDialog, setShowFileOpenDialog] = useState(false);
   const [pendingFilePath, setPendingFilePath] = useState<string | null>(null);
 
-  const handleFileOpen = useCallback(async (filePath: string) => {
-    try {
-      console.log('Opening file:', filePath);
-      const csvData = await tauriAPI.openCsvFile(filePath);
-      console.log('CSV data loaded:', csvData);
-      setData(csvData, filePath);
-      setCurrentFilePath(filePath);
-    } catch (error) {
-      console.error('Error opening file:', error);
-      setError(`Failed to open file: ${error}`);
-    }
-  }, [tauriAPI, setData, setCurrentFilePath, setError]);
+  const handleFileOpen = useCallback(
+    async (filePath: string) => {
+      try {
+        console.log("Opening file:", filePath);
+        const csvData = await tauriAPI.openCsvFile(filePath);
+        console.log("CSV data loaded:", csvData);
+        setData(csvData, filePath);
+        setCurrentFilePath(filePath);
+      } catch (error) {
+        console.error("Error opening file:", error);
+        setError(`Failed to open file: ${error}`);
+      }
+    },
+    [tauriAPI, setData, setCurrentFilePath, setError]
+  );
 
   // Listen for file open events from macOS
   useEffect(() => {
     const setupListener = async () => {
-      const unlisten = await listen<string>('open-file', async (event) => {
+      const unlisten = await listen<string>("open-file", async (event) => {
         const filePath = event.payload;
-        console.log('Received open-file event in React:', filePath);
+        console.log("Received open-file event in React:", filePath);
 
         // Check if there's already a file open
         if (data && currentFilePath) {
-          console.log('File already open, showing dialog');
+          console.log("File already open, showing dialog");
           // Show confirmation dialog
           setPendingFilePath(filePath);
           setShowFileOpenDialog(true);
         } else {
-          console.log('No file open, opening directly');
+          console.log("No file open, opening directly");
           // No file open, directly open the new file
           await handleFileOpen(filePath);
         }
@@ -60,7 +74,7 @@ function App() {
 
     let unlistenFn: (() => void) | null = null;
 
-    setupListener().then(fn => {
+    setupListener().then((fn) => {
       unlistenFn = fn;
     });
 
@@ -79,7 +93,7 @@ function App() {
         await tauriAPI.saveCsvFile(currentFilePath, data);
         markSaved();
       } else {
-        setSaveMode('saveAs');
+        setSaveMode("saveAs");
         setShowSaveDialog(true);
       }
     } catch (error) {
@@ -87,34 +101,40 @@ function App() {
     }
   }, [data, currentFilePath, tauriAPI, markSaved, setError]);
 
-  const handleSaveAs = useCallback(async (options?: SaveOptions) => {
-    if (!data) return;
+  const handleSaveAs = useCallback(
+    async (options?: SaveOptions) => {
+      if (!data) return;
 
-    try {
-      const defaultName = currentFilePath ?
-        currentFilePath.split('/').pop()?.replace(/\.[^/.]+$/, '') :
-        'untitled';
+      try {
+        const defaultName = currentFilePath
+          ? currentFilePath
+              .split("/")
+              .pop()
+              ?.replace(/\.[^/.]+$/, "")
+          : "untitled";
 
-      const filePath = await tauriAPI.saveFileDialog(
-        `${defaultName}.${options?.format || 'csv'}`,
-        options?.format || 'csv'
-      );
+        const filePath = await tauriAPI.saveFileDialog(
+          `${defaultName}.${options?.format || "csv"}`,
+          options?.format || "csv"
+        );
 
-      if (filePath) {
-        if (options) {
-          await tauriAPI.saveCsvFileAs(filePath, data, options);
-        } else {
-          await tauriAPI.saveCsvFile(filePath, data);
+        if (filePath) {
+          if (options) {
+            await tauriAPI.saveCsvFileAs(filePath, data, options);
+          } else {
+            await tauriAPI.saveCsvFile(filePath, data);
+          }
+          setCurrentFilePath(filePath);
+          markSaved();
         }
-        setCurrentFilePath(filePath);
-        markSaved();
+      } catch (error) {
+        setError(String(error));
+      } finally {
+        setShowSaveDialog(false);
       }
-    } catch (error) {
-      setError(String(error));
-    } finally {
-      setShowSaveDialog(false);
-    }
-  }, [data, currentFilePath, tauriAPI, setCurrentFilePath, markSaved, setError]);
+    },
+    [data, currentFilePath, tauriAPI, setCurrentFilePath, markSaved, setError]
+  );
 
   const handleOpenFile = useCallback(async () => {
     const filePath = await tauriAPI.openFileDialog();
@@ -130,46 +150,52 @@ function App() {
     }
   }, [data, currentFilePath, tauriAPI, handleFileOpen]);
 
-  const handlePaste = useCallback(async (text: string) => {
-    try {
-      console.log('Pasting CSV text:', text.substring(0, 100));
-      const csvData = await tauriAPI.parseCsvFromText(text);
-      console.log('CSV data parsed:', csvData);
-      setData(csvData, undefined);
-      setCurrentFilePath(null);
-    } catch (error) {
-      console.error('Error parsing pasted CSV:', error);
-      setError(`Failed to parse pasted CSV: ${error}`);
-    }
-  }, [tauriAPI, setData, setCurrentFilePath, setError]);
+  const handlePaste = useCallback(
+    async (text: string) => {
+      try {
+        console.log("Pasting CSV text:", text.substring(0, 100));
+        const csvData = await tauriAPI.parseCsvFromText(text);
+        console.log("CSV data parsed:", csvData);
+        setData(csvData, undefined);
+        setCurrentFilePath(null);
+      } catch (error) {
+        console.error("Error parsing pasted CSV:", error);
+        setError(`Failed to parse pasted CSV: ${error}`);
+      }
+    },
+    [tauriAPI, setData, setCurrentFilePath, setError]
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 's') {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "s") {
         e.preventDefault();
         handleSave();
-      } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 's') {
+      } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "s") {
         e.preventDefault();
-        setSaveMode('saveAs');
+        setSaveMode("saveAs");
         setShowSaveDialog(true);
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();
-        setSearchMode('search');
+        setSearchMode("search");
         setIsSearchOpen(true);
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "r") {
         e.preventDefault();
-        setSearchMode('replace');
+        setSearchMode("replace");
         setIsSearchOpen(true);
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "o") {
         e.preventDefault();
         handleOpenFile();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        e.preventDefault();
+        createNewCsv();
       }
     };
 
     const handlePasteEvent = (e: ClipboardEvent) => {
       // Only handle paste when no file is open
       if (!data || !currentFilePath) {
-        const text = e.clipboardData?.getData('text/plain');
+        const text = e.clipboardData?.getData("text/plain");
         if (text && text.trim()) {
           e.preventDefault();
           handlePaste(text);
@@ -177,24 +203,31 @@ function App() {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('paste', handlePasteEvent);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("paste", handlePasteEvent);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('paste', handlePasteEvent);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("paste", handlePasteEvent);
     };
-  }, [handleSave, handleOpenFile, handlePaste, data, currentFilePath]);
+  }, [
+    handleSave,
+    handleOpenFile,
+    handlePaste,
+    data,
+    currentFilePath,
+    createNewCsv,
+  ]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
-        e.returnValue = '';
+        e.returnValue = "";
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
   const handleOpenInCurrentWindow = useCallback(async () => {
@@ -223,7 +256,7 @@ function App() {
       <Toolbar
         onSave={handleSave}
         onSaveAs={() => {
-          setSaveMode('saveAs');
+          setSaveMode("saveAs");
           setShowSaveDialog(true);
         }}
         onOpenSearch={() => setIsSearchOpen(true)}
@@ -280,7 +313,7 @@ function App() {
         isOpen={showSaveDialog}
         onClose={() => setShowSaveDialog(false)}
         onSave={handleSaveAs}
-        title={saveMode === 'saveAs' ? 'Save As' : 'Save'}
+        title={saveMode === "saveAs" ? "Save As" : "Save"}
       />
 
       <FileOpenDialog
@@ -291,7 +324,7 @@ function App() {
         }}
         onOpenInCurrentWindow={handleOpenInCurrentWindow}
         onOpenInNewWindow={handleOpenInNewWindow}
-        fileName={pendingFilePath ? pendingFilePath.split('/').pop() || '' : ''}
+        fileName={pendingFilePath ? pendingFilePath.split("/").pop() || "" : ""}
       />
     </div>
   );
