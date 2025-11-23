@@ -155,16 +155,66 @@ export function CsvTable() {
   // Register scroll callback for search navigation
   useEffect(() => {
     const scrollCallback = (row: number, column: number) => {
-      // Scroll to row
-      rowVirtualizer.scrollToIndex(row, {
-        align: "center",
-        behavior: "smooth",
-      });
+      // Scroll to row - ensure it's fully visible
+      requestAnimationFrame(() => {
+        const virtualItems = rowVirtualizer.getVirtualItems();
+        const virtualItem = virtualItems.find(
+          (item) => item.index === row
+        );
 
-      // Scroll to column
-      columnVirtualizer.scrollToIndex(column, {
-        align: "center",
-        behavior: "smooth",
+        if (virtualItem && parentRef.current) {
+          const scrollElement = parentRef.current;
+          const cellTop = virtualItem.start;
+          const cellBottom = virtualItem.end;
+          const scrollTop = scrollElement.scrollTop;
+          const scrollHeight = scrollElement.clientHeight;
+          const statisticsBarHeight = 40;
+          const margin = 10;
+          const availableHeight = scrollHeight - statisticsBarHeight - margin;
+          const visibleTop = scrollTop;
+          const visibleBottom = scrollTop + availableHeight;
+
+          if (cellBottom > visibleBottom) {
+            const offset = cellBottom - visibleBottom + margin;
+            scrollElement.scrollTop = scrollTop + offset;
+          } else if (cellTop < visibleTop) {
+            scrollElement.scrollTop = cellTop - margin;
+          }
+        } else {
+          rowVirtualizer.scrollToIndex(row, {
+            align: "center",
+            behavior: "smooth",
+          });
+        }
+
+        // Scroll to column - ensure it's fully visible
+        const columnVirtualItems = columnVirtualizer.getVirtualItems();
+        const columnVirtualItem = columnVirtualItems.find(
+          (item) => item.index === column
+        );
+
+        if (columnVirtualItem && parentRef.current) {
+          const scrollElement = parentRef.current;
+          const cellLeft = columnVirtualItem.start;
+          const cellRight = columnVirtualItem.end;
+          const scrollLeft = scrollElement.scrollLeft;
+          const scrollWidth = scrollElement.clientWidth;
+          const margin = 10;
+          const visibleLeft = scrollLeft + margin;
+          const visibleRight = scrollLeft + scrollWidth - margin;
+
+          if (cellRight > visibleRight) {
+            const offset = cellRight - visibleRight + margin;
+            scrollElement.scrollLeft = scrollLeft + offset;
+          } else if (cellLeft < visibleLeft) {
+            scrollElement.scrollLeft = cellLeft - margin;
+          }
+        } else {
+          columnVirtualizer.scrollToIndex(column, {
+            align: "center",
+            behavior: "smooth",
+          });
+        }
       });
     };
 
@@ -174,7 +224,96 @@ export function CsvTable() {
     return () => {
       setScrollToCell(null);
     };
-  }, [rowVirtualizer, columnVirtualizer, setScrollToCell]);
+  }, [rowVirtualizer, columnVirtualizer, setScrollToCell, parentRef]);
+
+  // Auto-scroll to selected cell when it changes
+  useEffect(() => {
+    if (!data || editingCell) return;
+
+    let targetRow: number | null = null;
+    let targetColumn: number | null = null;
+
+    if (selectedCell) {
+      targetRow = selectedCell.row;
+      targetColumn = selectedCell.column;
+    } else if (selectedRange) {
+      // Use focus point (current active end) if available, otherwise use end point
+      targetRow = selectedRange.focusRow ?? selectedRange.endRow;
+      targetColumn = selectedRange.focusColumn ?? selectedRange.endColumn;
+    }
+
+    if (targetRow !== null && targetColumn !== null) {
+      // Use double requestAnimationFrame to ensure DOM is fully updated
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!parentRef.current) return;
+
+          // Find the cell element using data attributes
+          const cellElement = parentRef.current.querySelector(
+            `[data-row-index="${targetRow}"][data-column-index="${targetColumn}"]`
+          ) as HTMLElement;
+
+          if (cellElement) {
+            const scrollElement = parentRef.current;
+            const cellRect = cellElement.getBoundingClientRect();
+            const scrollRect = scrollElement.getBoundingClientRect();
+            const statisticsBarHeight = 40;
+            const margin = 20; // Increased margin for better visibility
+
+            // Check row visibility
+            const cellTop = cellRect.top - scrollRect.top + scrollElement.scrollTop;
+            const cellBottom = cellTop + cellRect.height;
+            const visibleTop = scrollElement.scrollTop;
+            const visibleBottom = scrollElement.scrollTop + scrollElement.clientHeight - statisticsBarHeight - margin;
+
+            if (cellBottom > visibleBottom) {
+              // Cell is cut off at bottom
+              const offset = cellBottom - visibleBottom + margin;
+              scrollElement.scrollTop = scrollElement.scrollTop + offset;
+            } else if (cellTop < visibleTop) {
+              // Cell is cut off at top
+              scrollElement.scrollTop = cellTop - margin;
+            }
+
+            // Check column visibility
+            const cellLeft = cellRect.left - scrollRect.left + scrollElement.scrollLeft;
+            const cellRight = cellLeft + cellRect.width;
+            const visibleLeft = scrollElement.scrollLeft + margin;
+            const visibleRight = scrollElement.scrollLeft + scrollElement.clientWidth - margin;
+
+            if (cellRight > visibleRight) {
+              // Column is cut off at right
+              const offset = cellRight - visibleRight + margin;
+              scrollElement.scrollLeft = scrollElement.scrollLeft + offset;
+            } else if (cellLeft < visibleLeft) {
+              // Column is cut off at left
+              scrollElement.scrollLeft = cellLeft - margin;
+            }
+          } else {
+            // Cell is not rendered yet, use virtualizer to scroll
+            if (
+              targetRow >= 0 &&
+              targetRow < (data?.rows.length || 0)
+            ) {
+              rowVirtualizer.scrollToIndex(targetRow, {
+                align: "center",
+                behavior: "smooth",
+              });
+            }
+            if (
+              targetColumn >= 0 &&
+              targetColumn < (data?.headers.length || 0)
+            ) {
+              columnVirtualizer.scrollToIndex(targetColumn, {
+                align: "center",
+                behavior: "smooth",
+              });
+            }
+          }
+        });
+      });
+    }
+  }, [selectedCell, selectedRange, data, editingCell, rowVirtualizer, columnVirtualizer]);
 
   const handleCellClick = (
     row: number,
@@ -383,6 +522,78 @@ export function CsvTable() {
 
       if (extendToCell) {
         extendSelection(extendToCell);
+        // Scroll to the extended cell - ensure it's fully visible
+        requestAnimationFrame(() => {
+          // Scroll row into view
+          if (
+            extendToCell.row >= 0 &&
+            extendToCell.row < (data?.rows.length || 0)
+          ) {
+            const virtualItems = rowVirtualizer.getVirtualItems();
+            const virtualItem = virtualItems.find(
+              (item) => item.index === extendToCell.row
+            );
+
+            if (virtualItem && parentRef.current) {
+              const scrollElement = parentRef.current;
+              const cellTop = virtualItem.start;
+              const cellBottom = virtualItem.end;
+              const scrollTop = scrollElement.scrollTop;
+              const scrollHeight = scrollElement.clientHeight;
+              const statisticsBarHeight = 40;
+              const margin = 10;
+              const availableHeight = scrollHeight - statisticsBarHeight - margin;
+              const visibleTop = scrollTop;
+              const visibleBottom = scrollTop + availableHeight;
+
+              if (cellBottom > visibleBottom) {
+                const offset = cellBottom - visibleBottom + margin;
+                scrollElement.scrollTop = scrollTop + offset;
+              } else if (cellTop < visibleTop) {
+                scrollElement.scrollTop = cellTop - margin;
+              }
+            } else {
+              rowVirtualizer.scrollToIndex(extendToCell.row, {
+                align: "center",
+                behavior: "smooth",
+              });
+            }
+          }
+
+          // Scroll column into view
+          if (
+            extendToCell.column >= 0 &&
+            extendToCell.column < (data?.headers.length || 0)
+          ) {
+            const virtualItems = columnVirtualizer.getVirtualItems();
+            const virtualItem = virtualItems.find(
+              (item) => item.index === extendToCell.column
+            );
+
+            if (virtualItem && parentRef.current) {
+              const scrollElement = parentRef.current;
+              const cellLeft = virtualItem.start;
+              const cellRight = virtualItem.end;
+              const scrollLeft = scrollElement.scrollLeft;
+              const scrollWidth = scrollElement.clientWidth;
+              const margin = 10;
+              const visibleLeft = scrollLeft + margin;
+              const visibleRight = scrollLeft + scrollWidth - margin;
+
+              if (cellRight > visibleRight) {
+                const offset = cellRight - visibleRight + margin;
+                scrollElement.scrollLeft = scrollLeft + offset;
+              } else if (cellLeft < visibleLeft) {
+                scrollElement.scrollLeft = cellLeft - margin;
+              }
+            } else {
+              columnVirtualizer.scrollToIndex(extendToCell.column, {
+                align: "center",
+                behavior: "smooth",
+              });
+            }
+          }
+        });
         return;
       }
     }
@@ -452,32 +663,8 @@ export function CsvTable() {
       };
       selectCell(newCell);
 
-      // Scroll selected cell into view for keyboard navigation
-      requestAnimationFrame(() => {
-        // Scroll row into view
-        const scrollToRowIndex = newRow;
-        if (
-          scrollToRowIndex >= 0 &&
-          scrollToRowIndex < (data?.rows.length || 0)
-        ) {
-          rowVirtualizer.scrollToIndex(scrollToRowIndex, {
-            align: "auto",
-            behavior: "smooth",
-          });
-        }
-
-        // Scroll column into view
-        const scrollToColumnIndex = newColumn;
-        if (
-          scrollToColumnIndex >= 0 &&
-          scrollToColumnIndex < (data?.headers.length || 0)
-        ) {
-          columnVirtualizer.scrollToIndex(scrollToColumnIndex, {
-            align: "auto",
-            behavior: "smooth",
-          });
-        }
-      });
+      // Note: The useEffect hook will handle scrolling to ensure the cell is fully visible
+      // We don't need to scroll here as it will be handled by the useEffect
     }
   };
 
@@ -807,7 +994,7 @@ export function CsvTable() {
         ) : (
           <div
             style={{
-              height: rowVirtualizer.getTotalSize(),
+              height: rowVirtualizer.getTotalSize() + 40, // Add padding for statistics bar
               width: columnVirtualizer.getTotalSize() + 48,
               position: "relative",
               minWidth: "100%",
@@ -942,6 +1129,8 @@ export function CsvTable() {
                   return (
                     <div
                       key={`${virtualRow.index}-${virtualColumn.index}`}
+                      data-row-index={virtualRow.index}
+                      data-column-index={virtualColumn.index}
                       className={cn(
                         "border-r border-b border-border bg-background flex items-center px-2 text-sm cursor-cell transition-colors hover:bg-accent outline-none",
                         {

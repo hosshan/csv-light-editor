@@ -7,7 +7,6 @@ import {
   Redo,
   Search,
   Settings,
-  FileText,
   Shield,
   CheckSquare,
   BarChart3,
@@ -35,7 +34,6 @@ interface ToolbarProps {
 export function Toolbar({ onSave, onSaveAs, onOpenSearch, onNewCsv }: ToolbarProps = {}) {
   const {
     data,
-    currentFilePath,
     hasUnsavedChanges,
     setLoading,
     setData,
@@ -238,20 +236,8 @@ export function Toolbar({ onSave, onSaveAs, onOpenSearch, onNewCsv }: ToolbarPro
         </div>
       </div>
 
-      {/* File Info and Settings */}
+      {/* Settings */}
       <div className="flex items-center space-x-2">
-        {data && (
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <FileText className="h-4 w-4" />
-            <span>
-              {currentFilePath ? currentFilePath.split('/').pop() : 'Untitled'}
-            </span>
-            {hasUnsavedChanges && (
-              <span className="text-orange-500">• Unsaved</span>
-            )}
-          </div>
-        )}
-
         <Button
           variant="ghost"
           size="sm"
