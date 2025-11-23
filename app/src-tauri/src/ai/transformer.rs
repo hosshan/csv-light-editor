@@ -1,6 +1,5 @@
 use anyhow::{Result, anyhow};
 use chrono::NaiveDate;
-use regex::Regex;
 
 use super::{TransformOperation, TargetScope, DataChange};
 

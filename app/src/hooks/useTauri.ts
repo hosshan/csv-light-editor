@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/tauri';
 import { open, save } from '@tauri-apps/api/dialog';
-import type { CsvData, CsvMetadata, SortState } from '../types/csv';
+import type { CsvData, CsvMetadata, SortState, ViewState } from '../types/csv';
 
 export interface SaveOptions {
   format?: 'csv' | 'tsv';
@@ -174,6 +174,25 @@ class TauriAPI {
       return result;
     } catch (error) {
       console.error('Failed to load sort state:', error);
+      return null;
+    }
+  }
+
+  async saveViewState(path: string, viewState: ViewState): Promise<void> {
+    try {
+      await invoke('save_view_state', { path, viewState });
+    } catch (error) {
+      console.error('Failed to save view state:', error);
+      throw new Error(`Failed to save view state: ${error}`);
+    }
+  }
+
+  async loadViewState(path: string): Promise<ViewState | null> {
+    try {
+      const result = await invoke<ViewState | null>('load_view_state', { path });
+      return result;
+    } catch (error) {
+      console.error('Failed to load view state:', error);
       return null;
     }
   }

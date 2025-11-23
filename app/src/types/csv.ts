@@ -82,3 +82,9 @@ export interface HistoryAction {
   };
   timestamp: number;
 }
+
+export interface ViewState {
+  columnWidths: Record<number, number>;
+  viewportRange?: ViewportRange;
+  defaultColumnWidth?: number;
+}

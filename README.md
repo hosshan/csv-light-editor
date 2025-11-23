@@ -73,3 +73,8 @@ cd app
 pnpm build          # Build frontend
 pnpm tauri build    # Build release version
 ```
+
+## Keyboard Shortcuts
+
+For a complete list of keyboard shortcuts and comparison with Google SpreadSheet and Excel, see:
+- [Keyboard Shortcuts Documentation](docs/keyboard-shortcuts.md)
