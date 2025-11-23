@@ -4,6 +4,7 @@ import { Sidebar } from "./components/layout/Sidebar";
 import { CsvTable } from "./components/csv/CsvTable";
 import { SaveDialog } from "./components/SaveDialog";
 import { FileOpenDialog } from "./components/FileOpenDialog";
+import { NewFileDialog } from "./components/NewFileDialog";
 import { SelectionStatistics } from "./components/SelectionStatistics";
 import { InlineSearchBar } from "./components/InlineSearchBar";
 import { useCsvStore } from "./store/csvStore";
@@ -32,6 +33,9 @@ function App() {
   const [searchMode, setSearchMode] = useState<"search" | "replace">("search");
   const [showFileOpenDialog, setShowFileOpenDialog] = useState(false);
   const [pendingFilePath, setPendingFilePath] = useState<string | null>(null);
+  const [showNewFileDialog, setShowNewFileDialog] = useState(false);
+  const [shouldCreateNewAfterSave, setShouldCreateNewAfterSave] =
+    useState(false);
 
   const handleFileOpen = useCallback(
     async (filePath: string) => {
@@ -126,14 +130,30 @@ function App() {
           }
           setCurrentFilePath(filePath);
           markSaved();
+
+          // 保存後に新規作成するフラグが設定されている場合
+          if (shouldCreateNewAfterSave) {
+            createNewCsv();
+            setShouldCreateNewAfterSave(false);
+          }
         }
       } catch (error) {
         setError(String(error));
+        setShouldCreateNewAfterSave(false);
       } finally {
         setShowSaveDialog(false);
       }
     },
-    [data, currentFilePath, tauriAPI, setCurrentFilePath, markSaved, setError]
+    [
+      data,
+      currentFilePath,
+      tauriAPI,
+      setCurrentFilePath,
+      markSaved,
+      setError,
+      shouldCreateNewAfterSave,
+      createNewCsv,
+    ]
   );
 
   const handleOpenFile = useCallback(async () => {
@@ -166,6 +186,46 @@ function App() {
     [tauriAPI, setData, setCurrentFilePath, setError]
   );
 
+  const handleNewCsv = useCallback(() => {
+    // 未保存の変更がある場合は確認ダイアログを表示
+    if (hasUnsavedChanges && data) {
+      setShowNewFileDialog(true);
+    } else {
+      // 変更がない場合は直接新規作成
+      createNewCsv();
+    }
+  }, [hasUnsavedChanges, data, createNewCsv]);
+
+  const handleNewCsvAfterSave = useCallback(async () => {
+    // 保存してから新規作成
+    if (!data) return;
+
+    try {
+      if (currentFilePath) {
+        // 既存ファイルに保存
+        await tauriAPI.saveCsvFile(currentFilePath, data);
+        markSaved();
+        createNewCsv();
+        setShowNewFileDialog(false);
+      } else {
+        // 新規ファイルとして保存（保存後に新規作成するフラグを設定）
+        setShouldCreateNewAfterSave(true);
+        setSaveMode("saveAs");
+        setShowNewFileDialog(false);
+        setShowSaveDialog(true);
+      }
+    } catch (error) {
+      setError(String(error));
+      setShouldCreateNewAfterSave(false);
+    }
+  }, [data, currentFilePath, tauriAPI, markSaved, createNewCsv, setError]);
+
+  const handleNewCsvDiscard = useCallback(() => {
+    // 保存せずに新規作成
+    createNewCsv();
+    setShowNewFileDialog(false);
+  }, [createNewCsv]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "s") {
@@ -188,7 +248,7 @@ function App() {
         handleOpenFile();
       } else if ((e.metaKey || e.ctrlKey) && e.key === "n") {
         e.preventDefault();
-        createNewCsv();
+        handleNewCsv();
       }
     };
 
@@ -213,9 +273,9 @@ function App() {
     handleSave,
     handleOpenFile,
     handlePaste,
+    handleNewCsv,
     data,
     currentFilePath,
-    createNewCsv,
   ]);
 
   useEffect(() => {
@@ -260,6 +320,7 @@ function App() {
           setShowSaveDialog(true);
         }}
         onOpenSearch={() => setIsSearchOpen(true)}
+        onNewCsv={handleNewCsv}
       />
 
       {/* Main Content Area */}
@@ -325,6 +386,18 @@ function App() {
         onOpenInCurrentWindow={handleOpenInCurrentWindow}
         onOpenInNewWindow={handleOpenInNewWindow}
         fileName={pendingFilePath ? pendingFilePath.split("/").pop() || "" : ""}
+      />
+
+      <NewFileDialog
+        isOpen={showNewFileDialog}
+        onClose={() => setShowNewFileDialog(false)}
+        onDiscard={handleNewCsvDiscard}
+        onSave={handleNewCsvAfterSave}
+        fileName={
+          currentFilePath
+            ? currentFilePath.split("/").pop() || undefined
+            : undefined
+        }
       />
     </div>
   );

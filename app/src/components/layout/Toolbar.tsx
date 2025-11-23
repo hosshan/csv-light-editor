@@ -29,9 +29,10 @@ interface ToolbarProps {
   onSave?: () => void;
   onSaveAs?: () => void;
   onOpenSearch?: () => void;
+  onNewCsv?: () => void;
 }
 
-export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
+export function Toolbar({ onSave, onSaveAs, onOpenSearch, onNewCsv }: ToolbarProps = {}) {
   const {
     data,
     currentFilePath,
@@ -47,8 +48,7 @@ export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
     replaceAll,
     currentSort,
     applySorting,
-    clearSorting,
-    createNewCsv
+    clearSorting
   } = useCsvStore();
   const tauri = useTauri();
 
@@ -97,7 +97,7 @@ export function Toolbar({ onSave, onSaveAs, onOpenSearch }: ToolbarProps = {}) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={createNewCsv}
+            onClick={onNewCsv || (() => {})}
             className="flex items-center space-x-1"
             title="New CSV (⌘N)"
           >
