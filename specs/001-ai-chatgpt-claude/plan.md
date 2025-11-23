@@ -274,8 +274,8 @@ app/
 *This checklist is updated during execution flow*
 
 **Phase Status**:
-- [ ] Phase 0: Research complete (/plan command)
-- [ ] Phase 1: Design complete (/plan command)
+- [x] Phase 0: Research complete (/plan command) - research.md created
+- [x] Phase 1: Design complete (/plan command) - data-model.md, contracts/, quickstart.md created
 - [x] Phase 2: Task planning complete (/plan command - describe approach only)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
@@ -283,8 +283,8 @@ app/
 
 **Gate Status**:
 - [x] Initial Constitution Check: PASS
-- [ ] Post-Design Constitution Check: PASS (Phase 1完了後)
-- [ ] All NEEDS CLARIFICATION resolved (Phase 0完了後)
+- [x] Post-Design Constitution Check: PASS (Phase 1完了)
+- [x] All NEEDS CLARIFICATION resolved (Phase 0完了)
 - [x] Complexity deviations documented
 
 ---
