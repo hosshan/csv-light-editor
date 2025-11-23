@@ -1,4 +1,6 @@
 use crate::ai::{AiAssistant, DataChange};
+use crate::ai_script::{Script, ExecutionContext, ResultPayload};
+use crate::chat::ChatHistory;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -232,4 +234,155 @@ fn generate_intent_description(intent: &crate::ai::Intent) -> String {
             format!("{} {}", operation_desc, scope_desc)
         }
     }
+}
+
+// ============================================================================
+// New AI Chat Commands (Script Generation & Execution)
+// ============================================================================
+
+/// Request to generate a script from user prompt
+#[derive(Debug, Deserialize)]
+pub struct GenerateScriptRequest {
+    pub prompt: String,
+    pub csv_context: ExecutionContext,
+}
+
+/// Response with generated script
+#[derive(Debug, Serialize)]
+pub struct GenerateScriptResponse {
+    pub script: Script,
+    pub script_type: String, // "analysis" or "transformation"
+    pub requires_approval: bool,
+}
+
+/// Generate a Python script from user prompt
+#[tauri::command]
+pub async fn generate_script(
+    _prompt: String,
+    _csv_context: ExecutionContext,
+) -> Result<GenerateScriptResponse, String> {
+    // TODO: Implement script generation
+    Err("Not implemented yet".to_string())
+}
+
+/// Request to execute a script
+#[derive(Debug, Deserialize)]
+pub struct ExecuteScriptRequest {
+    pub script: Script,
+    pub approval: bool,
+    pub csv_data: CsvDataInput,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CsvDataInput {
+    pub headers: Vec<String>,
+    pub rows: Vec<Vec<String>>,
+}
+
+/// Response with execution result
+#[derive(Debug, Serialize)]
+pub struct ExecuteScriptResponse {
+    pub execution_id: String,
+    pub result: ResultPayload,
+    pub changes: Option<Vec<crate::ai_script::DataChange>>,
+}
+
+/// Execute a Python script
+#[tauri::command]
+pub async fn execute_script(
+    _script: Script,
+    _approval: bool,
+    _csv_data: CsvDataInput,
+) -> Result<ExecuteScriptResponse, String> {
+    // TODO: Implement script execution
+    Err("Not implemented yet".to_string())
+}
+
+/// Request to get script execution progress
+#[derive(Debug, Deserialize)]
+pub struct GetScriptProgressRequest {
+    pub execution_id: String,
+}
+
+/// Response with progress information
+#[derive(Debug, Serialize)]
+pub struct GetScriptProgressResponse {
+    pub progress: crate::ai_script::ExecutionProgress,
+    pub is_completed: bool,
+}
+
+/// Get script execution progress
+#[tauri::command]
+pub async fn get_script_progress(
+    _execution_id: String,
+) -> Result<GetScriptProgressResponse, String> {
+    // TODO: Implement progress retrieval
+    Err("Not implemented yet".to_string())
+}
+
+/// Request to cancel script execution
+#[derive(Debug, Deserialize)]
+pub struct CancelScriptExecutionRequest {
+    pub execution_id: String,
+}
+
+/// Response with cancellation result
+#[derive(Debug, Serialize)]
+pub struct CancelScriptExecutionResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+/// Cancel script execution
+#[tauri::command]
+pub async fn cancel_script_execution(
+    _execution_id: String,
+) -> Result<CancelScriptExecutionResponse, String> {
+    // TODO: Implement cancellation
+    Err("Not implemented yet".to_string())
+}
+
+/// Request to save chat history
+#[derive(Debug, Deserialize)]
+pub struct SaveChatHistoryRequest {
+    pub csv_path: String,
+    pub history: ChatHistory,
+}
+
+/// Response with save result
+#[derive(Debug, Serialize)]
+pub struct SaveChatHistoryResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+/// Save chat history to metadata
+#[tauri::command]
+pub async fn save_chat_history(
+    _csv_path: String,
+    _history: ChatHistory,
+) -> Result<SaveChatHistoryResponse, String> {
+    // TODO: Implement chat history saving
+    Err("Not implemented yet".to_string())
+}
+
+/// Request to load chat history
+#[derive(Debug, Deserialize)]
+pub struct LoadChatHistoryRequest {
+    pub csv_path: String,
+}
+
+/// Response with chat history
+#[derive(Debug, Serialize)]
+pub struct LoadChatHistoryResponse {
+    pub history: Option<ChatHistory>,
+}
+
+/// Load chat history from metadata
+#[tauri::command]
+pub async fn load_chat_history(
+    _csv_path: String,
+) -> Result<LoadChatHistoryResponse, String> {
+    // TODO: Implement chat history loading
+    Err("Not implemented yet".to_string())
 }

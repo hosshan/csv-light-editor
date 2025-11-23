@@ -7,6 +7,8 @@ mod state;
 mod utils;
 mod settings;
 mod ai;
+mod ai_script;
+mod chat;
 
 use state::AppStateInner;
 use tokio::sync::Mutex;
@@ -118,6 +120,12 @@ fn main() {
             commands::ai::ai_detect_intent,
             commands::ai::ai_execute,
             commands::ai::ai_apply_changes,
+            commands::ai::generate_script,
+            commands::ai::execute_script,
+            commands::ai::get_script_progress,
+            commands::ai::cancel_script_execution,
+            commands::ai::save_chat_history,
+            commands::ai::load_chat_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
