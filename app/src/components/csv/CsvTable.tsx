@@ -9,6 +9,8 @@ import { DragHandle } from "./DragHandle";
 import { DropZoneIndicator } from "./DropZoneIndicator";
 import { FilterBar } from "../filtering/FilterBar";
 import { useDragAndDrop } from "../../hooks/useDragAndDrop";
+import { Button } from "../ui/Button";
+import { Plus } from "lucide-react";
 import styles from "./CsvTable.module.css";
 
 export function CsvTable() {
@@ -258,6 +260,47 @@ export function CsvTable() {
             }
           }
           return;
+        case "i":
+          // Cmd/Ctrl+Shift+I for inserting a new row (I = Insert)
+          if (e.shiftKey) {
+            e.preventDefault();
+            if (data) {
+              // If cursor exists, add row below the cursor
+              // Otherwise, add row at the end of the file
+              const targetRowIndex =
+                selectedCell !== null
+                  ? selectedCell.row
+                  : data.rows.length > 0
+                  ? data.rows.length - 1
+                  : undefined;
+
+              // Calculate the new row index before adding
+              // For 'below' position: newRowIndex = targetRowIndex + 1
+              // For undefined (end): newRowIndex = data.rows.length
+              const newRowIndex =
+                selectedCell !== null ? selectedCell.row + 1 : data.rows.length;
+
+              addRow("below", targetRowIndex);
+
+              // Focus first cell of new row
+              setTimeout(() => {
+                // Get updated data from store to verify
+                const updatedData = useCsvStore.getState().data;
+                if (updatedData && updatedData.headers.length > 0) {
+                  // Use the calculated newRowIndex (it should match the inserted row)
+                  const firstCell = {
+                    row: newRowIndex,
+                    column: selectedCell !== null ? selectedCell.column : 0,
+                    value: "",
+                  };
+                  selectCell(firstCell);
+                  startEditing(firstCell);
+                }
+              }, 100);
+            }
+            return;
+          }
+          break;
       }
     }
 
@@ -656,220 +699,265 @@ export function CsvTable() {
         tabIndex={0}
         onKeyDown={handleKeyDown}
       >
-        <div
-          style={{
-            height: rowVirtualizer.getTotalSize(),
-            width: columnVirtualizer.getTotalSize() + 48,
-            position: "relative",
-            minWidth: "100%",
-          }}
-        >
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => (
-            <div key={virtualRow.index} className="flex">
-              {/* Row number */}
-              <RowMenu
-                rowIndex={virtualRow.index}
-                onAddRow={(position) => {
-                  addRow(position, virtualRow.index);
-                }}
-                onDeleteRow={() => {
-                  deleteRow(virtualRow.index);
-                }}
-                onDuplicateRow={() => {
-                  duplicateRow(virtualRow.index);
-                }}
-              >
-                <div
-                  className={cn(
-                    "w-12 border-r border-b border-border bg-muted/50 flex items-center justify-center text-xs text-muted-foreground cursor-pointer hover:bg-accent transition-colors",
-                    {
-                      "bg-primary/20 border-primary":
-                        selectedRange?.type === "row" &&
-                        selectedRange.startRow <= virtualRow.index &&
-                        selectedRange.endRow >= virtualRow.index,
-                    }
-                  )}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    height: virtualRow.size,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                  onMouseDown={(e) => {
-                    // Don't handle row selection if clicking on drag handle
-                    if ((e.target as Element).closest('[draggable="true"]')) {
-                      return;
-                    }
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleRowHeaderClick(virtualRow.index, e);
-                  }}
-                  onDragOver={(e) => handlers.onDragOver(virtualRow.index, e)}
-                  onDragLeave={handlers.onDragLeave}
-                  onDragEnter={(e) => e.preventDefault()}
-                >
-                  <DragHandle
-                    type="row"
-                    index={virtualRow.index}
-                    isDragging={
-                      dragState.draggedIndex === virtualRow.index &&
-                      dragState.draggedType === "row"
-                    }
-                    isDropTarget={
-                      dragState.dropTargetIndex === virtualRow.index &&
-                      dragState.draggedType === "row"
-                    }
-                    onDragStart={handlers.onDragStart}
-                    onDragEnd={handlers.onDragEnd}
-                    className="w-3 h-4 mb-1"
-                  />
-                  <span className="text-xs">{virtualRow.index + 1}</span>
-                  <DropZoneIndicator
-                    type="row"
-                    position="before"
-                    isVisible={
-                      dragState.dropTargetIndex === virtualRow.index &&
-                      dragState.draggedType === "row"
-                    }
-                  />
+        {/* Empty table state */}
+        {displayData && displayData.rows.length === 0 ? (
+          <div className="flex-1 flex items-start justify-center pt-32">
+            <div className="text-center space-y-4">
+              <div className="text-muted-foreground">
+                <div className="text-lg mb-2">テーブルが空です</div>
+                <div className="text-sm mb-4">
+                  データを入力するために行を追加してください
                 </div>
-              </RowMenu>
-
-              {/* Data cells */}
-              {columnVirtualizer.getVirtualItems().map((virtualColumn) => {
-                const cellValue =
-                  displayData?.rows[virtualRow.index]?.[virtualColumn.index] ||
-                  "";
-                const isSelected =
-                  selectedCell?.row === virtualRow.index &&
-                  selectedCell?.column === virtualColumn.index;
-                const isEditing =
-                  editingCell?.row === virtualRow.index &&
-                  editingCell?.column === virtualColumn.index;
-
-                // Check if cell is in selected range
-                // Only apply range selection logic when type is 'range'
-                const isInRange =
-                  selectedRange?.type === "range" &&
-                  virtualRow.index >= selectedRange.startRow &&
-                  virtualRow.index <= selectedRange.endRow &&
-                  virtualColumn.index >= selectedRange.startColumn &&
-                  virtualColumn.index <= selectedRange.endColumn;
-
-                // Check if cell is in selected row (when type is 'row')
-                const isInSelectedRow =
-                  selectedRange?.type === "row" &&
-                  virtualRow.index >= selectedRange.startRow &&
-                  virtualRow.index <= selectedRange.endRow;
-
-                // Check if cell is in selected column (when type is 'column')
-                const isInSelectedColumn =
-                  selectedRange?.type === "column" &&
-                  virtualColumn.index >= selectedRange.startColumn &&
-                  virtualColumn.index <= selectedRange.endColumn;
-
-                // Check if this is the focus cell (active end of selection)
-                const isFocusCell =
-                  selectedRange?.type === "range" &&
-                  selectedRange.focusRow === virtualRow.index &&
-                  selectedRange.focusColumn === virtualColumn.index;
-
-                // Check if cell is in search results (only if there are results)
-                const hasSearchResults = searchResults.length > 0;
-                const searchResultIndex = hasSearchResults
-                  ? searchResults.findIndex(
-                      (result) =>
-                        result.row === virtualRow.index &&
-                        result.column === virtualColumn.index
-                    )
-                  : -1;
-                const isSearchResult = searchResultIndex !== -1;
-                const isCurrentSearchResult =
-                  hasSearchResults && searchResultIndex === currentSearchIndex;
-
-                return (
+              </div>
+              <Button
+                onClick={() => {
+                  addRow("below", undefined);
+                  // Focus first cell after adding row
+                  setTimeout(() => {
+                    const updatedData = useCsvStore.getState().data;
+                    if (updatedData && updatedData.headers.length > 0) {
+                      const firstCell = {
+                        row: 0,
+                        column: 0,
+                        value: "",
+                      };
+                      selectCell(firstCell);
+                      startEditing(firstCell);
+                    }
+                  }, 100);
+                }}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                行を追加
+              </Button>
+              <div className="text-xs text-muted-foreground mt-2">
+                Cmd+Shift+I または Ctrl+Shift+I でも行を追加できます
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              height: rowVirtualizer.getTotalSize(),
+              width: columnVirtualizer.getTotalSize() + 48,
+              position: "relative",
+              minWidth: "100%",
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => (
+              <div key={virtualRow.index} className="flex">
+                {/* Row number */}
+                <RowMenu
+                  rowIndex={virtualRow.index}
+                  onAddRow={(position) => {
+                    addRow(position, virtualRow.index);
+                  }}
+                  onDeleteRow={() => {
+                    deleteRow(virtualRow.index);
+                  }}
+                  onDuplicateRow={() => {
+                    duplicateRow(virtualRow.index);
+                  }}
+                >
                   <div
-                    key={`${virtualRow.index}-${virtualColumn.index}`}
                     className={cn(
-                      "border-r border-b border-border bg-background flex items-center px-2 text-sm cursor-cell transition-colors hover:bg-accent outline-none",
+                      "w-12 border-r border-b border-border bg-muted/50 flex items-center justify-center text-xs text-muted-foreground cursor-pointer hover:bg-accent transition-colors",
                       {
-                        "bg-primary/10 border-primary border-2 z-10":
-                          isSelected && !isEditing && !isCurrentSearchResult,
-                        "bg-accent border-primary border-2 z-20 ring-2 ring-primary/50":
-                          isEditing,
-                        "bg-primary/5":
-                          (isInRange ||
-                            isInSelectedRow ||
-                            isInSelectedColumn) &&
-                          !isSelected &&
-                          !isEditing &&
-                          !isFocusCell &&
-                          !isSearchResult,
-                        "bg-primary/15 border-primary/50 border-2 z-15":
-                          isFocusCell && !isEditing && !isCurrentSearchResult,
-                        "bg-yellow-200 border-yellow-400 border-2 z-[5]":
-                          isSearchResult &&
-                          !isCurrentSearchResult &&
-                          !isEditing,
-                        "bg-orange-300 border-orange-500 border-2 z-[30] ring-2 ring-orange-400":
-                          isCurrentSearchResult && !isEditing,
+                        "bg-primary/20 border-primary":
+                          selectedRange?.type === "row" &&
+                          selectedRange.startRow <= virtualRow.index &&
+                          selectedRange.endRow >= virtualRow.index,
                       }
                     )}
                     style={{
                       position: "absolute",
                       top: 0,
-                      left: 48,
-                      width: virtualColumn.size,
+                      left: 0,
                       height: virtualRow.size,
-                      transform: `translate(${virtualColumn.start}px, ${virtualRow.start}px)`,
-                      backfaceVisibility: "hidden",
+                      transform: `translateY(${virtualRow.start}px)`,
                     }}
-                    onMouseDown={handleCellMouseDown}
-                    onClick={(e) =>
-                      handleCellClick(virtualRow.index, virtualColumn.index, e)
-                    }
-                    onDoubleClick={() =>
-                      handleCellDoubleClick(
-                        virtualRow.index,
-                        virtualColumn.index
-                      )
-                    }
-                    tabIndex={-1}
+                    onMouseDown={(e) => {
+                      // Don't handle row selection if clicking on drag handle
+                      if ((e.target as Element).closest('[draggable="true"]')) {
+                        return;
+                      }
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleRowHeaderClick(virtualRow.index, e);
+                    }}
+                    onDragOver={(e) => handlers.onDragOver(virtualRow.index, e)}
+                    onDragLeave={handlers.onDragLeave}
+                    onDragEnter={(e) => e.preventDefault()}
                   >
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onKeyDown={handleEditKeyDown}
-                        onBlur={() => {
-                          if (editingCell) {
-                            updateCell(editingCell, editValue);
-                            setTimeout(() => {
-                              parentRef.current?.focus();
-                            }, 0);
-                          }
-                        }}
-                        className="w-full bg-transparent border-none outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground"
-                        autoFocus
-                        autoComplete="off"
-                        spellCheck={false}
-                      />
-                    ) : (
-                      <span
-                        className="truncate w-full block"
-                        title={cellValue.length > 20 ? cellValue : undefined}
-                      >
-                        {cellValue}
-                      </span>
-                    )}
+                    <DragHandle
+                      type="row"
+                      index={virtualRow.index}
+                      isDragging={
+                        dragState.draggedIndex === virtualRow.index &&
+                        dragState.draggedType === "row"
+                      }
+                      isDropTarget={
+                        dragState.dropTargetIndex === virtualRow.index &&
+                        dragState.draggedType === "row"
+                      }
+                      onDragStart={handlers.onDragStart}
+                      onDragEnd={handlers.onDragEnd}
+                      className="w-3 h-4 mb-1"
+                    />
+                    <span className="text-xs">{virtualRow.index + 1}</span>
+                    <DropZoneIndicator
+                      type="row"
+                      position="before"
+                      isVisible={
+                        dragState.dropTargetIndex === virtualRow.index &&
+                        dragState.draggedType === "row"
+                      }
+                    />
                   </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+                </RowMenu>
+
+                {/* Data cells */}
+                {columnVirtualizer.getVirtualItems().map((virtualColumn) => {
+                  const cellValue =
+                    displayData?.rows[virtualRow.index]?.[
+                      virtualColumn.index
+                    ] || "";
+                  const isSelected =
+                    selectedCell?.row === virtualRow.index &&
+                    selectedCell?.column === virtualColumn.index;
+                  const isEditing =
+                    editingCell?.row === virtualRow.index &&
+                    editingCell?.column === virtualColumn.index;
+
+                  // Check if cell is in selected range
+                  // Only apply range selection logic when type is 'range'
+                  const isInRange =
+                    selectedRange?.type === "range" &&
+                    virtualRow.index >= selectedRange.startRow &&
+                    virtualRow.index <= selectedRange.endRow &&
+                    virtualColumn.index >= selectedRange.startColumn &&
+                    virtualColumn.index <= selectedRange.endColumn;
+
+                  // Check if cell is in selected row (when type is 'row')
+                  const isInSelectedRow =
+                    selectedRange?.type === "row" &&
+                    virtualRow.index >= selectedRange.startRow &&
+                    virtualRow.index <= selectedRange.endRow;
+
+                  // Check if cell is in selected column (when type is 'column')
+                  const isInSelectedColumn =
+                    selectedRange?.type === "column" &&
+                    virtualColumn.index >= selectedRange.startColumn &&
+                    virtualColumn.index <= selectedRange.endColumn;
+
+                  // Check if this is the focus cell (active end of selection)
+                  const isFocusCell =
+                    selectedRange?.type === "range" &&
+                    selectedRange.focusRow === virtualRow.index &&
+                    selectedRange.focusColumn === virtualColumn.index;
+
+                  // Check if cell is in search results (only if there are results)
+                  const hasSearchResults = searchResults.length > 0;
+                  const searchResultIndex = hasSearchResults
+                    ? searchResults.findIndex(
+                        (result) =>
+                          result.row === virtualRow.index &&
+                          result.column === virtualColumn.index
+                      )
+                    : -1;
+                  const isSearchResult = searchResultIndex !== -1;
+                  const isCurrentSearchResult =
+                    hasSearchResults &&
+                    searchResultIndex === currentSearchIndex;
+
+                  return (
+                    <div
+                      key={`${virtualRow.index}-${virtualColumn.index}`}
+                      className={cn(
+                        "border-r border-b border-border bg-background flex items-center px-2 text-sm cursor-cell transition-colors hover:bg-accent outline-none",
+                        {
+                          "bg-primary/10 border-primary border-2 z-10":
+                            isSelected && !isEditing && !isCurrentSearchResult,
+                          "bg-accent border-primary border-2 z-20 ring-2 ring-primary/50":
+                            isEditing,
+                          "bg-primary/5":
+                            (isInRange ||
+                              isInSelectedRow ||
+                              isInSelectedColumn) &&
+                            !isSelected &&
+                            !isEditing &&
+                            !isFocusCell &&
+                            !isSearchResult,
+                          "bg-primary/15 border-primary/50 border-2 z-15":
+                            isFocusCell && !isEditing && !isCurrentSearchResult,
+                          "bg-yellow-200 border-yellow-400 border-2 z-[5]":
+                            isSearchResult &&
+                            !isCurrentSearchResult &&
+                            !isEditing,
+                          "bg-orange-300 border-orange-500 border-2 z-[30] ring-2 ring-orange-400":
+                            isCurrentSearchResult && !isEditing,
+                        }
+                      )}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 48,
+                        width: virtualColumn.size,
+                        height: virtualRow.size,
+                        transform: `translate(${virtualColumn.start}px, ${virtualRow.start}px)`,
+                        backfaceVisibility: "hidden",
+                      }}
+                      onMouseDown={handleCellMouseDown}
+                      onClick={(e) =>
+                        handleCellClick(
+                          virtualRow.index,
+                          virtualColumn.index,
+                          e
+                        )
+                      }
+                      onDoubleClick={() =>
+                        handleCellDoubleClick(
+                          virtualRow.index,
+                          virtualColumn.index
+                        )
+                      }
+                      tabIndex={-1}
+                    >
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={handleEditKeyDown}
+                          onBlur={() => {
+                            if (editingCell) {
+                              updateCell(editingCell, editValue);
+                              setTimeout(() => {
+                                parentRef.current?.focus();
+                              }, 0);
+                            }
+                          }}
+                          className="w-full bg-transparent border-none outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground"
+                          autoFocus
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                      ) : (
+                        <span
+                          className="truncate w-full block"
+                          title={cellValue.length > 20 ? cellValue : undefined}
+                        >
+                          {cellValue}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
