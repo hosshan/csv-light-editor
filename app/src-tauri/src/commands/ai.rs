@@ -1,5 +1,4 @@
-use crate::ai::{AiAssistant, AiResponse, DataChange};
-use crate::state::AppState;
+use crate::ai::{AiAssistant, DataChange};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 

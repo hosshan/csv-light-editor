@@ -23,6 +23,11 @@
    - データフロー設計
    - パフォーマンス最適化戦略
 
+4. **[keyboard-shortcuts.md](./keyboard-shortcuts.md)**
+   - 実装済みキーボードショートカット一覧
+   - Google SpreadSheet、Excelとの比較表
+   - 未実装機能のリスト
+
 ## 🎯 プロジェクト概要
 
 CSV Light Editorは、Mac向けの高速かつ軽量なCSV編集アプリケーションです。

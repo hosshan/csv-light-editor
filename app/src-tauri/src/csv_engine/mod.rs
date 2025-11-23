@@ -7,6 +7,4 @@ pub mod quality;
 pub mod cleansing;
 pub mod export;
 
-pub use reader::CsvReader;
-pub use writer::CsvWriter;
-pub use streaming::StreamingReader;
+// Re-exported types are used directly from their modules

@@ -409,7 +409,7 @@ impl DataAnalyzer {
 
     fn detect_duplicates(
         &self,
-        headers: &[String],
+        _headers: &[String],
         rows: &[Vec<String>],
         _scope: &TargetScope,
     ) -> Result<AnalysisResult> {

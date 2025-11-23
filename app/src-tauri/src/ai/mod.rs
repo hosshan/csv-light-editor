@@ -12,7 +12,7 @@ pub use intent::{Intent, IntentType, TargetScope, AnalysisType, TransformOperati
 pub use analyzer::DataAnalyzer;
 pub use transformer::DataTransformer;
 pub use config::AiConfig;
-pub use llm_client::{LlmClient, LlmProvider, OpenAiClient, GeminiClient};
+pub use llm_client::{LlmClient, OpenAiClient, GeminiClient};
 
 /// AI Assistant that processes user prompts in two stages:
 /// 1. Intent Detection: Understand what the user wants to do

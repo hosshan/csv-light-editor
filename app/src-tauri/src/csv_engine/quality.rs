@@ -87,7 +87,7 @@ impl QualityAnalyzer {
         for (col_idx, header) in headers.iter().enumerate() {
             let mut empty_count = 0;
             let mut unique_values = HashSet::new();
-            let mut type_detector = crate::csv_engine::data_types::DataTypeDetector::new();
+            let type_detector = crate::csv_engine::data_types::DataTypeDetector::new();
             let mut type_counts: HashMap<String, usize> = HashMap::new();
 
             for row in data {

@@ -7,8 +7,8 @@ use crate::csv_engine::data_types::{DataType, DataTypeDetector};
 use crate::csv_engine::validation::{ValidationRule, Validator, ValidationError as CustomValidationError};
 use crate::csv_engine::quality::QualityAnalyzer;
 use crate::csv_engine::cleansing::{DataCleanser, CleansingOptions, CleansingResult};
-use crate::csv_engine::export::{Exporter, ExportFormat, ExportOptions};
-use crate::metadata::CsvMetadata;
+use crate::csv_engine::export::{Exporter, ExportOptions};
+use crate::metadata::{CsvMetadata, ViewState};
 use crate::state::AppState;
 use crate::utils::AppError;
 use encoding_rs::{UTF_8, SHIFT_JIS, EUC_JP};
@@ -783,6 +783,41 @@ pub async fn load_sort_state(
     let metadata = state.metadata_manager.load_metadata(path)?;
 
     Ok(metadata.sort_state)
+}
+
+#[tauri::command]
+pub async fn save_view_state(
+    path: String,
+    view_state: ViewState,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    let path = Path::new(&path);
+
+    let mut state = state.lock().await;
+
+    // Load current metadata
+    let mut metadata = state.metadata_manager.load_metadata(path)?;
+
+    // Update view state
+    metadata.view_state = Some(view_state);
+
+    // Save updated metadata
+    state.metadata_manager.save_metadata(path, &metadata)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn load_view_state(
+    path: String,
+    state: State<'_, AppState>,
+) -> Result<Option<ViewState>, AppError> {
+    let path = Path::new(&path);
+
+    let mut state = state.lock().await;
+    let metadata = state.metadata_manager.load_metadata(path)?;
+
+    Ok(metadata.view_state)
 }
 
 #[tauri::command]

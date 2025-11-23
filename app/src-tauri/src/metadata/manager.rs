@@ -1,9 +1,30 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use std::collections::HashMap;
 use anyhow::Result;
 use chrono;
-use crate::commands::csv::{SortState, SortColumn};
+use crate::commands::csv::SortState;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ViewState {
+    #[serde(default)]
+    pub column_widths: HashMap<usize, f64>,
+    #[serde(default)]
+    pub viewport_range: Option<ViewportRange>,
+    #[serde(default)]
+    pub default_column_width: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ViewportRange {
+    pub start_row: usize,
+    pub end_row: usize,
+    pub start_column: usize,
+    pub end_column: usize,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -19,6 +40,8 @@ pub struct CsvMetadata {
     pub last_modified: String,
     #[serde(default)]
     pub sort_state: Option<SortState>,
+    #[serde(default)]
+    pub view_state: Option<ViewState>,
 }
 
 impl CsvMetadata {
@@ -46,6 +69,7 @@ impl CsvMetadata {
             file_size: metadata.len(),
             last_modified,
             sort_state: None,
+            view_state: None,
         })
     }
 
@@ -66,6 +90,7 @@ impl CsvMetadata {
             file_size: 0,
             last_modified: chrono::Local::now().to_rfc3339(),
             sort_state: None,
+            view_state: None,
         }
     }
 }

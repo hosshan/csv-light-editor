@@ -8,6 +8,7 @@ interface CsvState {
   data: CsvData | null;
   currentFilePath: string | null;
   isLoading: boolean;
+  loadingProgress: number; // 0-100
   error: string | null;
 
   // Selection state
@@ -60,10 +61,16 @@ interface CsvState {
   }>;
   aiPendingChanges: any | null;
 
+  // Validation state
+  cellValidationErrors: Record<string, string>; // key: "row:column", value: error message
+  setCellValidationError: (row: number, column: number, error: string | null) => void;
+  getCellValidationError: (row: number, column: number) => string | null;
+
   // Actions
   setData: (data: CsvData, filePath?: string) => void;
   setCurrentFilePath: (path: string | null) => void;
   setLoading: (loading: boolean) => void;
+  setLoadingProgress: (progress: number) => void;
   setError: (error: string | null) => void;
 
   selectCell: (cell: CsvCell | null) => void;
@@ -74,6 +81,7 @@ interface CsvState {
   extendSelection: (cell: CsvCell) => void;
 
   setViewportRange: (range: ViewportRange) => void;
+  saveViewState: () => Promise<void>;
 
   startEditing: (cell: CsvCell) => void;
   stopEditing: () => void;
@@ -155,6 +163,7 @@ export const useCsvStore = create<CsvState>()(
       data: null,
       currentFilePath: null,
       isLoading: false,
+      loadingProgress: 0,
       error: null,
 
       selectedCell: null,
@@ -195,6 +204,8 @@ export const useCsvStore = create<CsvState>()(
       aiMessages: [],
       aiPendingChanges: null,
 
+      cellValidationErrors: {},
+
       // Actions
       setData: async (data, filePath) => {
         const newFilePath = filePath || get().currentFilePath;
@@ -204,7 +215,7 @@ export const useCsvStore = create<CsvState>()(
           currentFilePath: newFilePath
         });
 
-        // Load sort state from metadata if file path is available
+        // Load sort state and view state from metadata if file path is available
         if (newFilePath) {
           try {
             const { tauriAPI } = await import('../hooks/useTauri');
@@ -212,13 +223,23 @@ export const useCsvStore = create<CsvState>()(
             if (savedSortState && savedSortState.columns.length > 0) {
               set({ currentSort: savedSortState });
             }
+
+            const savedViewState = await tauriAPI.loadViewState(newFilePath);
+            if (savedViewState) {
+              set({
+                columnWidths: savedViewState.columnWidths || {},
+                viewportRange: savedViewState.viewportRange || get().viewportRange,
+                defaultColumnWidth: savedViewState.defaultColumnWidth || get().defaultColumnWidth,
+              });
+            }
           } catch (error) {
-            console.warn('Failed to load sort state from metadata:', error);
+            console.warn('Failed to load state from metadata:', error);
           }
         }
       },
       setCurrentFilePath: (currentFilePath) => set({ currentFilePath }),
-      setLoading: (isLoading) => set({ isLoading }),
+      setLoading: (isLoading) => set({ isLoading, loadingProgress: isLoading ? 0 : 100 }),
+      setLoadingProgress: (loadingProgress) => set({ loadingProgress }),
       setError: (error) => set({ error, isLoading: false }),
 
       selectCell: (selectedCell) => set({ selectedCell, selectedRange: null }),
@@ -323,6 +344,22 @@ export const useCsvStore = create<CsvState>()(
       },
 
       setViewportRange: (viewportRange) => set({ viewportRange }),
+      
+      saveViewState: async () => {
+        const state = get();
+        if (state.currentFilePath) {
+          try {
+            const { tauriAPI } = await import('../hooks/useTauri');
+            await tauriAPI.saveViewState(state.currentFilePath, {
+              columnWidths: state.columnWidths,
+              viewportRange: state.viewportRange,
+              defaultColumnWidth: state.defaultColumnWidth,
+            });
+          } catch (error) {
+            console.warn('Failed to save view state:', error);
+          }
+        }
+      },
 
       startEditing: (editingCell) => set({ editingCell }),
       stopEditing: () => set({ editingCell: null }),
@@ -1072,14 +1109,27 @@ export const useCsvStore = create<CsvState>()(
       },
 
       // Column width operations
-      setColumnWidth: (columnIndex, width) => {
+      setColumnWidth: async (columnIndex, width) => {
         const state = get();
-        set({
-          columnWidths: {
-            ...state.columnWidths,
-            [columnIndex]: width
+        const newColumnWidths = {
+          ...state.columnWidths,
+          [columnIndex]: width
+        };
+        set({ columnWidths: newColumnWidths });
+
+        // Auto-save view state
+        if (state.currentFilePath) {
+          try {
+            const { tauriAPI } = await import('../hooks/useTauri');
+            await tauriAPI.saveViewState(state.currentFilePath, {
+              columnWidths: newColumnWidths,
+              viewportRange: state.viewportRange,
+              defaultColumnWidth: state.defaultColumnWidth,
+            });
+          } catch (error) {
+            console.warn('Failed to save view state:', error);
           }
-        });
+        }
       },
 
       getColumnWidth: (columnIndex) => {
@@ -1380,7 +1430,8 @@ export const useCsvStore = create<CsvState>()(
         defaultColumnWidth: 150,
         currentSort: { columns: [] },
         aiMessages: [],
-        aiPendingChanges: null
+        aiPendingChanges: null,
+        cellValidationErrors: {}
       }),
 
       createNewCsv: () => {

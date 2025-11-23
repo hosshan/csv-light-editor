@@ -11,6 +11,7 @@ import { useCsvStore } from "./store/csvStore";
 import { useTauri } from "./hooks/useTauri";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "./components/ui/Button";
+import { Progress } from "./components/ui/progress";
 import type { SaveOptions } from "./hooks/useTauri";
 import { listen } from "@tauri-apps/api/event";
 
@@ -20,11 +21,13 @@ function App() {
     currentFilePath,
     hasUnsavedChanges,
     isLoading,
+    loadingProgress,
     error,
     setData,
     setCurrentFilePath,
     markSaved,
     setError,
+    setLoading,
     createNewCsv,
   } = useCsvStore();
   const tauriAPI = useTauri();
@@ -43,16 +46,19 @@ function App() {
     async (filePath: string) => {
       try {
         console.log("Opening file:", filePath);
+        setLoading(true);
         const csvData = await tauriAPI.openCsvFile(filePath);
         console.log("CSV data loaded:", csvData);
         setData(csvData, filePath);
         setCurrentFilePath(filePath);
+        setLoading(false);
       } catch (error) {
         console.error("Error opening file:", error);
         setError(`Failed to open file: ${error}`);
+        setLoading(false);
       }
     },
-    [tauriAPI, setData, setCurrentFilePath, setError]
+    [tauriAPI, setData, setCurrentFilePath, setError, setLoading]
   );
 
   // Listen for file open events from macOS
@@ -355,9 +361,15 @@ function App() {
         <div className="flex-1 bg-background flex flex-col overflow-hidden">
           {isLoading && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-              <div className="flex items-center gap-2 text-foreground">
+              <div className="flex flex-col items-center gap-4 text-foreground w-80">
                 <Loader2 className="w-6 h-6 animate-spin" />
                 <span>Loading CSV file...</span>
+                <div className="w-full">
+                  <Progress value={loadingProgress} className="h-2" />
+                  <div className="text-xs text-muted-foreground mt-1 text-center">
+                    {loadingProgress}%
+                  </div>
+                </div>
               </div>
             </div>
           )}

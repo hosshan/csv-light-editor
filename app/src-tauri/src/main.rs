@@ -8,7 +8,7 @@ mod utils;
 mod settings;
 mod ai;
 
-use state::{AppState, AppStateInner};
+use state::AppStateInner;
 use tokio::sync::Mutex;
 use settings::SettingsManager;
 use commands::settings::SettingsState;
@@ -101,6 +101,8 @@ fn main() {
             commands::csv::sort_csv_data,
             commands::csv::save_sort_state,
             commands::csv::load_sort_state,
+            commands::csv::save_view_state,
+            commands::csv::load_view_state,
             commands::csv::move_row,
             commands::csv::move_column,
             commands::csv::validate_with_rules,
