@@ -9,7 +9,8 @@ import { SelectionStatistics } from "./components/SelectionStatistics";
 import { InlineSearchBar } from "./components/InlineSearchBar";
 import { useCsvStore } from "./store/csvStore";
 import { useTauri } from "./hooks/useTauri";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "./components/ui/Button";
 import type { SaveOptions } from "./hooks/useTauri";
 import { listen } from "@tauri-apps/api/event";
 
@@ -36,6 +37,7 @@ function App() {
   const [showNewFileDialog, setShowNewFileDialog] = useState(false);
   const [shouldCreateNewAfterSave, setShouldCreateNewAfterSave] =
     useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const handleFileOpen = useCallback(
     async (filePath: string) => {
@@ -324,9 +326,30 @@ function App() {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Sidebar */}
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} />
+
+        {/* Sidebar Toggle Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`absolute top-1/2 -translate-y-1/2 z-20 h-6 w-6 rounded-full border border-border bg-background shadow-sm hover:bg-accent transition-all duration-300 ${
+            isSidebarOpen
+              ? "left-80 -translate-x-1/2"
+              : "left-0 -translate-x-1/2"
+          }`}
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          aria-label={
+            isSidebarOpen ? "サイドバーを折りたたむ" : "サイドバーを展開"
+          }
+        >
+          {isSidebarOpen ? (
+            <ChevronLeft className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </Button>
 
         {/* CSV Table */}
         <div className="flex-1 bg-background flex flex-col overflow-hidden">
