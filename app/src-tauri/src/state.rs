@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use tokio::sync::Mutex;
 use crate::metadata::MetadataManager;
+use crate::ai_script::executor::ScriptExecutor;
 
 #[derive(Clone)]
 pub struct CsvData {
@@ -26,5 +27,14 @@ impl AppStateInner {
             csv_data: None,
             has_unsaved_changes: false,
         }
+    }
+}
+
+// Script executor state for managing script executions
+pub struct ScriptExecutorState(pub Mutex<ScriptExecutor>);
+
+impl ScriptExecutorState {
+    pub fn new() -> Self {
+        Self(Mutex::new(ScriptExecutor::new()))
     }
 }

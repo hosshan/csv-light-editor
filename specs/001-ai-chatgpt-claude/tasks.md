@@ -87,29 +87,29 @@
 - [x] T030 Implement script type detection (analysis vs transformation) in app/src-tauri/src/ai_script/generator.rs
 
 ### Script Execution Engine
-- [x] T031 Create Python script executor in app/src-tauri/src/ai_script/executor.rs (using std::process::Command) (スタブ実装)
-- [x] T032 Implement script security validation in app/src-tauri/src/ai_script/security.rs (スタブ実装)
-- [ ] T033 Implement progress streaming from Python stdout in app/src-tauri/src/ai_script/executor.rs
-- [ ] T034 Implement script result parsing (JSON from stdout) in app/src-tauri/src/ai_script/executor.rs
-- [ ] T035 Implement script cancellation support in app/src-tauri/src/ai_script/executor.rs
+- [x] T031 Create Python script executor in app/src-tauri/src/ai_script/executor.rs (using std::process::Command)
+- [x] T032 Implement script security validation in app/src-tauri/src/ai_script/security.rs
+- [x] T033 Implement progress streaming from Python stdout in app/src-tauri/src/ai_script/executor.rs
+- [x] T034 Implement script result parsing (JSON from stdout) in app/src-tauri/src/ai_script/executor.rs
+- [x] T035 Implement script cancellation support in app/src-tauri/src/ai_script/executor.rs
 
 ### Progress Management
-- [x] T036 Create progress tracker in app/src-tauri/src/ai_script/progress.rs (track multiple executions) (スタブ実装)
-- [ ] T037 Implement Tauri event emission for progress updates in app/src-tauri/src/ai_script/executor.rs
+- [x] T036 Create progress tracker in app/src-tauri/src/ai_script/progress.rs (track multiple executions)
+- [x] T037 Implement Tauri event emission for progress updates in app/src-tauri/src/ai_script/executor.rs
 
 ### Chat History Management
-- [ ] T038 Extend CsvMetadata with chat_history field in app/src-tauri/src/metadata/manager.rs
-- [ ] T039 Implement chat history save/load in MetadataManager in app/src-tauri/src/metadata/manager.rs
-- [ ] T040 Add chat history migration support (backward compatibility) in app/src-tauri/src/metadata/manager.rs
+- [x] T038 Extend CsvMetadata with chat_history field in app/src-tauri/src/metadata/manager.rs
+- [x] T039 Implement chat history save/load in MetadataManager in app/src-tauri/src/metadata/manager.rs
+- [x] T040 Add chat history migration support (backward compatibility) in app/src-tauri/src/metadata/manager.rs
 
 ## Phase 3.4: Tauri Commands Integration
 
-- [x] T041 Implement generate_script command in app/src-tauri/src/commands/ai.rs (スタブ実装)
-- [x] T042 Implement execute_script command in app/src-tauri/src/commands/ai.rs (スタブ実装)
-- [x] T043 Implement get_script_progress command in app/src-tauri/src/commands/ai.rs (スタブ実装)
-- [x] T044 Implement cancel_script_execution command in app/src-tauri/src/commands/ai.rs (スタブ実装)
-- [x] T045 Implement save_chat_history command in app/src-tauri/src/commands/ai.rs (スタブ実装)
-- [x] T046 Implement load_chat_history command in app/src-tauri/src/commands/ai.rs (スタブ実装)
+- [x] T041 Implement generate_script command in app/src-tauri/src/commands/ai.rs
+- [x] T042 Implement execute_script command in app/src-tauri/src/commands/ai.rs
+- [x] T043 Implement get_script_progress command in app/src-tauri/src/commands/ai.rs
+- [x] T044 Implement cancel_script_execution command in app/src-tauri/src/commands/ai.rs
+- [x] T045 Implement save_chat_history command in app/src-tauri/src/commands/ai.rs
+- [x] T046 Implement load_chat_history command in app/src-tauri/src/commands/ai.rs
 - [x] T047 Register new commands in app/src-tauri/src/main.rs invoke_handler
 
 ## Phase 3.5: Frontend Integration
@@ -280,11 +280,11 @@ Task: "Create ApprovalDialog component in app/src/components/chat/ApprovalDialog
 
 ## Progress Summary
 
-**Completed Tasks**: 29 / 74 (39.2%)
+**Completed Tasks**: 43 / 74 (58.1%)
 - Phase 3.1: Setup - 5/5 (100%) ✓
 - Phase 3.2: Tests First - 6/14 (42.9%) - Contract tests created
-- Phase 3.3: Core Implementation - 16/21 (76.2%) - Data models, script generation engine completed
-- Phase 3.4: Tauri Commands - 7/7 (100%) ✓ - Commands stubbed and registered
+- Phase 3.3: Core Implementation - 21/21 (100%) ✓ - All core components completed
+- Phase 3.4: Tauri Commands - 7/7 (100%) ✓ - All commands implemented
 - Phase 3.5: Frontend Integration - 0/9 (0%)
 - Phase 3.6: Polish - 0/16 (0%)
 
@@ -300,9 +300,9 @@ Task: "Create ApprovalDialog component in app/src/components/chat/ApprovalDialog
 *Tasks generated: 2025-01-27*
 *Last updated: 2025-01-27*
 *Total tasks: 74*
-*Completed: 29*
+*Completed: 43*
 *In Progress: 0*
-*Pending: 45*
+*Pending: 31*
 *Parallel tasks: 35*
 *Sequential tasks: 39*
 

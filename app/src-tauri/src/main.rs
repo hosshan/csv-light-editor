@@ -10,7 +10,7 @@ mod ai;
 mod ai_script;
 mod chat;
 
-use state::AppStateInner;
+use state::{AppStateInner, ScriptExecutorState};
 use tokio::sync::Mutex;
 use settings::SettingsManager;
 use commands::settings::SettingsState;
@@ -39,10 +39,12 @@ fn main() {
 
     let app_state = Mutex::new(AppStateInner::new());
     let settings_state = SettingsState(Mutex::new(SettingsManager::new()));
+    let script_executor_state = ScriptExecutorState::new();
 
     tauri::Builder::default()
         .manage(app_state)
         .manage(settings_state)
+        .manage(script_executor_state)
         .setup(|app| {
             // Handle file open from command line arguments (macOS - app not running)
             let args: Vec<String> = std::env::args().collect();

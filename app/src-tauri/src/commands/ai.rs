@@ -1,8 +1,13 @@
 use crate::ai::{AiAssistant, DataChange};
-use crate::ai_script::{Script, ExecutionContext, ResultPayload};
+use crate::ai_script::{Script, ExecutionContext, ResultPayload, ScriptType};
+use crate::ai_script::generator::ScriptGenerator;
+use crate::state::{ScriptExecutorState, AppState};
 use crate::chat::ChatHistory;
+use crate::metadata::MetadataManager;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use tauri::{State, Window};
+use std::path::PathBuf;
 
 /// Request to detect user intent from a prompt
 #[derive(Debug, Deserialize)]
@@ -258,11 +263,27 @@ pub struct GenerateScriptResponse {
 /// Generate a Python script from user prompt
 #[tauri::command]
 pub async fn generate_script(
-    _prompt: String,
-    _csv_context: ExecutionContext,
+    prompt: String,
+    csv_context: ExecutionContext,
 ) -> Result<GenerateScriptResponse, String> {
-    // TODO: Implement script generation
-    Err("Not implemented yet".to_string())
+    let generator = ScriptGenerator::new();
+    
+    match generator.generate_script(&prompt, &csv_context).await {
+        Ok(script) => {
+            let script_type_str = match &script.script_type {
+                ScriptType::Analysis => "analysis",
+                ScriptType::Transformation => "transformation",
+            };
+            let requires_approval = matches!(&script.script_type, ScriptType::Transformation);
+            
+            Ok(GenerateScriptResponse {
+                script,
+                script_type: script_type_str.to_string(),
+                requires_approval,
+            })
+        }
+        Err(e) => Err(format!("Failed to generate script: {}", e)),
+    }
 }
 
 /// Request to execute a script
@@ -290,12 +311,35 @@ pub struct ExecuteScriptResponse {
 /// Execute a Python script
 #[tauri::command]
 pub async fn execute_script(
-    _script: Script,
-    _approval: bool,
-    _csv_data: CsvDataInput,
+    script: Script,
+    approval: bool,
+    csv_data: CsvDataInput,
+    executor_state: State<'_, ScriptExecutorState>,
+    window: Window,
 ) -> Result<ExecuteScriptResponse, String> {
-    // TODO: Implement script execution
-    Err("Not implemented yet".to_string())
+    // Check if approval is required for transformation scripts
+    let requires_approval = matches!(script.script_type, ScriptType::Transformation);
+    if requires_approval && !approval {
+        return Err("Script execution requires approval".to_string());
+    }
+
+    let executor = executor_state.0.lock().await;
+    
+    match executor.execute_script(&script, &csv_data.headers, &csv_data.rows, Some(window)).await {
+        Ok(execution_result) => {
+            let changes = match &execution_result.result {
+                ResultPayload::Transformation { changes, .. } => Some(changes.clone()),
+                _ => None,
+            };
+
+            Ok(ExecuteScriptResponse {
+                execution_id: execution_result.execution_id.clone(),
+                result: execution_result.result,
+                changes,
+            })
+        }
+        Err(e) => Err(format!("Script execution failed: {}", e)),
+    }
 }
 
 /// Request to get script execution progress
@@ -314,10 +358,23 @@ pub struct GetScriptProgressResponse {
 /// Get script execution progress
 #[tauri::command]
 pub async fn get_script_progress(
-    _execution_id: String,
+    execution_id: String,
+    executor_state: State<'_, ScriptExecutorState>,
 ) -> Result<GetScriptProgressResponse, String> {
-    // TODO: Implement progress retrieval
-    Err("Not implemented yet".to_string())
+    let executor = executor_state.0.lock().await;
+    
+    match executor.get_progress(&execution_id).await {
+        Some(progress) => {
+            // Check if execution is still active
+            // If progress is at 100%, it's likely completed
+            let is_completed = progress.progress_percentage >= 100.0;
+            Ok(GetScriptProgressResponse {
+                progress,
+                is_completed,
+            })
+        }
+        None => Err("Execution not found".to_string()),
+    }
 }
 
 /// Request to cancel script execution
@@ -336,10 +393,21 @@ pub struct CancelScriptExecutionResponse {
 /// Cancel script execution
 #[tauri::command]
 pub async fn cancel_script_execution(
-    _execution_id: String,
+    execution_id: String,
+    executor_state: State<'_, ScriptExecutorState>,
 ) -> Result<CancelScriptExecutionResponse, String> {
-    // TODO: Implement cancellation
-    Err("Not implemented yet".to_string())
+    let executor = executor_state.0.lock().await;
+    
+    match executor.cancel_execution(&execution_id).await {
+        Ok(()) => Ok(CancelScriptExecutionResponse {
+            success: true,
+            message: "Execution cancelled".to_string(),
+        }),
+        Err(e) => Ok(CancelScriptExecutionResponse {
+            success: false,
+            message: format!("Failed to cancel execution: {}", e),
+        }),
+    }
 }
 
 /// Request to save chat history
@@ -359,11 +427,24 @@ pub struct SaveChatHistoryResponse {
 /// Save chat history to metadata
 #[tauri::command]
 pub async fn save_chat_history(
-    _csv_path: String,
-    _history: ChatHistory,
+    csv_path: String,
+    history: ChatHistory,
+    app_state: State<'_, AppState>,
 ) -> Result<SaveChatHistoryResponse, String> {
-    // TODO: Implement chat history saving
-    Err("Not implemented yet".to_string())
+    let path = PathBuf::from(&csv_path);
+    
+    let mut state = app_state.lock().await;
+    
+    match state.metadata_manager.save_chat_history(&path, history) {
+        Ok(()) => Ok(SaveChatHistoryResponse {
+            success: true,
+            message: "Chat history saved successfully".to_string(),
+        }),
+        Err(e) => Ok(SaveChatHistoryResponse {
+            success: false,
+            message: format!("Failed to save chat history: {}", e),
+        }),
+    }
 }
 
 /// Request to load chat history
@@ -381,8 +462,17 @@ pub struct LoadChatHistoryResponse {
 /// Load chat history from metadata
 #[tauri::command]
 pub async fn load_chat_history(
-    _csv_path: String,
+    csv_path: String,
+    app_state: State<'_, AppState>,
 ) -> Result<LoadChatHistoryResponse, String> {
-    // TODO: Implement chat history loading
-    Err("Not implemented yet".to_string())
+    let path = PathBuf::from(&csv_path);
+    
+    let mut state = app_state.lock().await;
+    
+    match state.metadata_manager.load_chat_history(&path) {
+        Ok(history) => Ok(LoadChatHistoryResponse {
+            history,
+        }),
+        Err(e) => Err(format!("Failed to load chat history: {}", e)),
+    }
 }
