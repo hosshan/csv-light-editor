@@ -548,7 +548,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           <Button
             type="submit"
             disabled={isGenerating || isExecuting || !input.trim() || !data}
-            size="sm"
+            className="h-10"
           >
             <Send className="w-4 h-4" />
           </Button>
