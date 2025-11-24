@@ -282,7 +282,21 @@ pub async fn generate_script(
                 requires_approval,
             })
         }
-        Err(e) => Err(format!("Failed to generate script: {}", e)),
+        Err(e) => {
+            let error_str = e.to_string();
+            let error_msg = if error_str.contains("API key") || error_str.contains("authentication") {
+                "API key not configured. Please set your API key in settings.".to_string()
+            } else if error_str.contains("network") || error_str.contains("fetch") {
+                "Network error. Please check your internet connection.".to_string()
+            } else if error_str.contains("timeout") {
+                "Request timed out. Please try again.".to_string()
+            } else if error_str.contains("rate limit") {
+                "Rate limit exceeded. Please wait a moment and try again.".to_string()
+            } else {
+                format!("Failed to generate script: {}", e)
+            };
+            Err(error_msg)
+        }
     }
 }
 
@@ -338,7 +352,21 @@ pub async fn execute_script(
                 changes,
             })
         }
-        Err(e) => Err(format!("Script execution failed: {}", e)),
+                Err(e) => {
+                    let error_str = e.to_string();
+                    let error_msg = if error_str.contains("security") || error_str.contains("validation") {
+                        "The script contains potentially unsafe operations and was blocked for security reasons.".to_string()
+                    } else if error_str.contains("python") || error_str.contains("syntax") {
+                        "Python syntax error. The generated script may need to be reviewed.".to_string()
+                    } else if error_str.contains("timeout") || error_str.contains("cancelled") {
+                        "Execution was cancelled or timed out.".to_string()
+                    } else if error_str.contains("permission") || error_str.contains("access") {
+                        "Permission denied. The script may be trying to access restricted resources.".to_string()
+                    } else {
+                        format!("Script execution failed: {}", e)
+                    };
+                    Err(error_msg)
+                }
     }
 }
 

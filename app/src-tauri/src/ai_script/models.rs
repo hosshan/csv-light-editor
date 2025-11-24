@@ -75,6 +75,7 @@ pub struct ChangePreview {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExecutionContext {
     pub csv_path: Option<String>,
     pub headers: Vec<String>,
@@ -85,6 +86,7 @@ pub struct ExecutionContext {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SelectionRange {
     pub start_row: usize,
     pub end_row: usize,

@@ -1,7 +1,7 @@
 import { FileText, BarChart3, Filter, Calculator, Bot, Circle } from "lucide-react";
 import { useCsvStore } from "../../store/csvStore";
 import { formatNumber, formatFileSize } from "../../lib/utils";
-import { AiAssistant } from "../AiAssistant";
+import { ChatPanel } from "../chat/ChatPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 export interface SidebarProps {
@@ -56,7 +56,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             value="ai"
             className="flex-1 flex flex-col min-h-0 overflow-hidden m-0 p-0 data-[state=inactive]:hidden"
           >
-            <AiAssistant />
+            <ChatPanel />
           </TabsContent>
         </Tabs>
       </div>
