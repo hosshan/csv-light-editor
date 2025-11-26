@@ -220,7 +220,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       // Generate script
       const generateResponse = (await invoke("generate_script", {
         prompt: userPrompt,
-        csv_context: {
+        csvContext: {
           csv_path: currentFilePath || undefined,
           headers: data.headers,
           row_count: data.rows.length,
@@ -229,7 +229,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           sort_state: null,
           column_info: null,
         },
-        sample_rows: sampleRows,
+        sampleRows: sampleRows,
       })) as any;
 
       // Normalize script from snake_case to camelCase for frontend
@@ -336,7 +336,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
               : null,
           },
           approval,
-          csv_data: {
+          csvData: {
             headers: data.headers,
             rows: data.rows,
           },
@@ -400,8 +400,8 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
             const sampleRows = data.rows.slice(0, 5).map((row) => [...row]);
 
             const fixResponse = (await invoke("fix_script", {
-              original_prompt: script.userPrompt || input,
-              original_script: {
+              originalPrompt: script.userPrompt || input,
+              originalScript: {
                 id: script.id,
                 content: script.content,
                 script_type: script.scriptType ?? "analysis",
@@ -418,8 +418,8 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
                     }
                   : null,
               },
-              error_message: errorMessage,
-              csv_context: {
+              errorMessage: errorMessage,
+              csvContext: {
                 csv_path: currentFilePath || undefined,
                 headers: data.headers,
                 row_count: data.rows.length,
@@ -428,7 +428,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
                 sort_state: null,
                 column_info: null,
               },
-              sample_rows: sampleRows,
+              sampleRows: sampleRows,
             })) as any;
 
             // Normalize script from snake_case to camelCase for frontend

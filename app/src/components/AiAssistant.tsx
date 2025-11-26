@@ -72,7 +72,7 @@ export function AiAssistant() {
           prompt: userPrompt,
           headers: data.headers,
           rows: data.rows,
-          max_rows: 10000,
+          maxRows: 10000,
         },
       }) as any;
 
@@ -110,7 +110,7 @@ export function AiAssistant() {
           prompt: aiMessages[aiMessages.length - 2].content, // Get the user's last prompt
           headers: data.headers,
           rows: data.rows,
-          max_rows: 10000,
+          maxRows: 10000,
         },
       }) as any;
 
