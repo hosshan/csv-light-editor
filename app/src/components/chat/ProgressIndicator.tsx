@@ -11,6 +11,11 @@ interface ProgressIndicatorProps {
 }
 
 export function ProgressIndicator({ progress, className }: ProgressIndicatorProps) {
+  // Guard against undefined/null progress or missing properties
+  if (!progress || typeof progress.progressPercentage !== 'number') {
+    return null;
+  }
+
   const isCompleted = progress.progressPercentage >= 100.0;
   const isError = false; // TODO: Add error state to ExecutionProgress
 
@@ -21,6 +26,12 @@ export function ProgressIndicator({ progress, className }: ProgressIndicatorProp
     const secs = seconds % 60;
     return `${minutes}m ${secs}s`;
   };
+
+  // Safely get values with defaults
+  const progressPercentage = progress.progressPercentage ?? 0;
+  const currentStep = progress.currentStep ?? 'Processing...';
+  const processedRows = progress.processedRows ?? 0;
+  const totalRows = progress.totalRows ?? 0;
 
   return (
     <div className={cn('space-y-2 p-3 bg-muted/50 rounded-lg border', className)}>
@@ -39,18 +50,18 @@ export function ProgressIndicator({ progress, className }: ProgressIndicatorProp
           </span>
         </div>
         <Badge variant="secondary" className="text-xs">
-          {progress.progressPercentage.toFixed(1)}%
+          {progressPercentage.toFixed(1)}%
         </Badge>
       </div>
 
       {/* Progress bar */}
-      <Progress value={progress.progressPercentage} className="h-2" />
+      <Progress value={progressPercentage} className="h-2" />
 
       {/* Details */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{progress.currentStep}</span>
+        <span>{currentStep}</span>
         <span>
-          {progress.processedRows} / {progress.totalRows} rows
+          {processedRows} / {totalRows} rows
         </span>
       </div>
 

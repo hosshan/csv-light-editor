@@ -8,7 +8,6 @@ use crate::commands::csv::SortState;
 use crate::chat::ChatHistory;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ViewState {
     #[serde(default)]
     pub column_widths: HashMap<usize, f64>,
@@ -19,7 +18,6 @@ pub struct ViewState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ViewportRange {
     pub start_row: usize,
     pub end_row: usize,
@@ -28,7 +26,6 @@ pub struct ViewportRange {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct CsvMetadata {
     pub filename: String,
     pub path: String,

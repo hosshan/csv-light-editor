@@ -5,7 +5,6 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Script {
     pub id: String,
     pub content: String,
@@ -76,7 +75,6 @@ pub struct ChangePreview {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ExecutionContext {
     pub csv_path: Option<String>,
     pub headers: Vec<String>,
@@ -88,7 +86,6 @@ pub struct ExecutionContext {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ColumnInfo {
     pub column_index: usize,
     pub column_name: String,
@@ -98,7 +95,6 @@ pub struct ColumnInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct SelectionRange {
     pub start_row: usize,
     pub end_row: usize,

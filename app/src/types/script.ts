@@ -16,6 +16,7 @@ export interface ExecutionResult {
   completedAt?: string;
   result: ResultPayload;
   error?: string;
+  retryCount?: number;
 }
 
 export type ResultPayload =

@@ -37,9 +37,9 @@ export function ScriptPreview({
   const isFailed = script.executionState === 'failed';
 
   return (
-    <div className="border rounded-lg overflow-hidden bg-background">
+    <div className="border rounded-lg overflow-hidden bg-background w-full max-w-full min-w-0">
       {/* Header */}
-      <div className="flex items-center justify-between p-2 bg-muted/50 border-b">
+      <div className="flex items-center justify-between p-2 bg-muted/50 border-b overflow-hidden min-w-0">
         <div className="flex items-center gap-2">
           <Code className="w-4 h-4 text-muted-foreground" />
           <span className="text-xs font-medium">Python Script</span>
@@ -88,9 +88,9 @@ export function ScriptPreview({
       </div>
 
       {/* Script content */}
-      <div className="relative">
-        <pre className="p-3 text-xs font-mono overflow-x-auto bg-muted/30 max-h-64 overflow-y-auto">
-          <code>{script.content}</code>
+      <div className="relative w-full max-w-full min-w-0 overflow-hidden">
+        <pre className="p-3 text-xs font-mono overflow-x-auto bg-muted/30 max-h-64 overflow-y-auto w-full min-w-0">
+          <code className="block min-w-0 break-all">{script.content}</code>
         </pre>
       </div>
 

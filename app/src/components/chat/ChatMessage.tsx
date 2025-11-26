@@ -45,10 +45,10 @@ export const ChatMessageComponent = memo(function ChatMessageComponent({ message
       </div>
 
       {/* Message content */}
-      <div className={cn('flex-1', isUser && 'text-right')}>
+      <div className={cn('flex-1 min-w-0', isUser && 'text-right')}>
         <div
           className={cn(
-            'inline-block max-w-[85%] p-3 rounded-lg',
+            'inline-block max-w-[85%] p-3 rounded-lg min-w-0',
             isUser
               ? 'bg-primary text-primary-foreground'
               : isError
@@ -84,26 +84,62 @@ export const ChatMessageComponent = memo(function ChatMessageComponent({ message
           )}
 
           {/* Message text */}
-          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          {message.content && (
+            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          )}
 
           {/* Script preview */}
           {message.script && (
-            <div className="mt-3">
+            <div className="mt-3 w-full max-w-full min-w-0 overflow-hidden">
               <ScriptPreview script={message.script} />
             </div>
           )}
 
           {/* Analysis details */}
           {isAnalysis && message.metadata?.data && (
-            <div className="mt-3 space-y-2 text-xs">
-              {Object.entries(message.metadata.data).map(([key, value]: [string, any]) => (
-                <div key={key} className="bg-background/50 p-2 rounded">
-                  <div className="font-semibold mb-1">{key}</div>
-                  <pre className="overflow-x-auto text-[10px] font-mono">
-                    {JSON.stringify(value, null, 2)}
-                  </pre>
+            <div className="mt-3 space-y-3 text-xs">
+              {/* Summary section */}
+              {message.metadata.data.summary && (
+                <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded border border-blue-200 dark:border-blue-800">
+                  <div className="font-semibold mb-1 text-xs text-blue-900 dark:text-blue-100">要約</div>
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    {typeof message.metadata.data.summary === 'string' 
+                      ? message.metadata.data.summary 
+                      : JSON.stringify(message.metadata.data.summary, null, 2)}
+                  </p>
                 </div>
-              ))}
+              )}
+
+              {/* Details section - formatted display */}
+              {message.metadata.data.details && (
+                <div className="bg-background/50 p-3 rounded border">
+                  <div className="font-semibold mb-2 text-sm">詳細結果</div>
+                  {typeof message.metadata.data.details === 'object' && message.metadata.data.details !== null && !Array.isArray(message.metadata.data.details) ? (
+                    <div className="space-y-2">
+                      {Object.entries(message.metadata.data.details).map(([key, value]: [string, any]) => (
+                        <div key={key} className="flex items-center justify-between py-1 border-b border-border/50 last:border-0">
+                          <span className="font-medium">{key}:</span>
+                          <span className="text-muted-foreground ml-2">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <pre className="overflow-x-auto text-[10px] font-mono">
+                      {JSON.stringify(message.metadata.data.details, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )}
+              
+              {/* Raw output section - Python execution result */}
+              <details className="bg-muted/30 p-2 rounded border">
+                <summary className="cursor-pointer font-semibold text-xs mb-2 hover:text-foreground select-none">
+                  Python実行結果（JSON形式）
+                </summary>
+                <pre className="overflow-x-auto text-[10px] font-mono mt-2 p-2 bg-background/50 rounded max-h-64 overflow-y-auto">
+                  {JSON.stringify(message.metadata.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
 

@@ -374,7 +374,6 @@ export interface ExecutionContext {
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct CsvMetadata {
     // ... 既存フィールド
     pub filename: String,
