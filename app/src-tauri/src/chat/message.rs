@@ -6,6 +6,7 @@ use uuid::Uuid;
 use crate::ai_script::Script;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
     pub id: String,
     pub role: MessageRole,
@@ -24,6 +25,7 @@ pub enum MessageRole {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct MessageMetadata {
     pub message_type: Option<MessageType>,
     pub data: Option<serde_json::Value>,

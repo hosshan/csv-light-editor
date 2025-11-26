@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Script {
     pub id: String,
     pub content: String,
@@ -33,6 +34,7 @@ pub enum ExecutionState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExecutionResult {
     pub execution_id: String,
     pub started_at: DateTime<Utc>,
@@ -42,7 +44,7 @@ pub struct ExecutionResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum ResultPayload {
     Analysis {
         summary: String,
@@ -58,6 +60,7 @@ pub enum ResultPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DataChange {
     pub row_index: usize,
     pub column_index: usize,
@@ -66,6 +69,7 @@ pub struct DataChange {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChangePreview {
     pub row_index: usize,
     pub column_index: usize,
@@ -75,6 +79,7 @@ pub struct ChangePreview {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExecutionContext {
     pub csv_path: Option<String>,
     pub headers: Vec<String>,
@@ -86,6 +91,7 @@ pub struct ExecutionContext {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ColumnInfo {
     pub column_index: usize,
     pub column_name: String,
@@ -95,6 +101,7 @@ pub struct ColumnInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SelectionRange {
     pub start_row: usize,
     pub end_row: usize,

@@ -17,6 +17,7 @@ pub struct DetectIntentRequest {
 
 /// Response with detected intent
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DetectIntentResponse {
     pub intent_type: String,
     pub target_scope: String,
@@ -35,7 +36,7 @@ pub struct ExecuteAiRequest {
 
 /// Response with AI execution results
 #[derive(Debug, Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum ExecuteAiResponse {
     Analysis {
         summary: String,
@@ -52,6 +53,7 @@ pub enum ExecuteAiResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChangePreview {
     pub row_index: usize,
     pub column_index: usize,
@@ -254,6 +256,7 @@ pub struct GenerateScriptRequest {
 
 /// Response with generated script
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GenerateScriptResponse {
     pub script: Script,
     pub script_type: String, // "analysis" or "transformation"
@@ -434,6 +437,7 @@ pub struct CsvDataInput {
 
 /// Response with execution result
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExecuteScriptResponse {
     pub execution_id: String,
     pub result: ResultPayload,
@@ -513,6 +517,7 @@ pub struct GetScriptProgressRequest {
 
 /// Response with progress information
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetScriptProgressResponse {
     pub progress: crate::ai_script::ExecutionProgress,
     pub is_completed: bool,
@@ -548,6 +553,7 @@ pub struct CancelScriptExecutionRequest {
 
 /// Response with cancellation result
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CancelScriptExecutionResponse {
     pub success: bool,
     pub message: String,
@@ -582,6 +588,7 @@ pub struct SaveChatHistoryRequest {
 
 /// Response with save result
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SaveChatHistoryResponse {
     pub success: bool,
     pub message: String,
@@ -618,6 +625,7 @@ pub struct LoadChatHistoryRequest {
 
 /// Response with chat history
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LoadChatHistoryResponse {
     pub history: Option<ChatHistory>,
 }

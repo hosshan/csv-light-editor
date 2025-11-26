@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use crate::chat::message::ChatMessage;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatHistory {
     pub csv_path: String,
     pub messages: Vec<ChatMessage>,

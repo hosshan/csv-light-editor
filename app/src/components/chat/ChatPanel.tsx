@@ -50,7 +50,7 @@ const normalizeChatMessage = (message: any): ChatMessage => {
     script: normalizeScript(message.script) ?? undefined,
     metadata: message.metadata
       ? {
-          messageType: message.metadata.message_type ?? message.metadata.messageType,
+          messageType: message.metadata.messageType ?? message.metadata.message_type,
           data: message.metadata.data,
         }
       : undefined,
@@ -89,12 +89,12 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         })) as { history: any | null };
 
         if (response.history) {
-          // Convert snake_case to camelCase for ChatHistory
+          // Normalize ChatHistory (Rust returns camelCase via serde)
           const normalizedHistory: ChatHistory = {
-            csvPath: response.history.csv_path ?? response.history.csvPath,
+            csvPath: response.history.csvPath ?? response.history.csv_path,
             messages: response.history.messages?.map(normalizeChatMessage) ?? [],
-            createdAt: response.history.created_at ?? response.history.createdAt,
-            updatedAt: response.history.updated_at ?? response.history.updatedAt,
+            createdAt: response.history.createdAt ?? response.history.created_at,
+            updatedAt: response.history.updatedAt ?? response.history.updated_at,
           };
           const normalizedMessages = normalizedHistory.messages;
           setCurrentHistory(normalizedHistory);
@@ -221,42 +221,43 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       const generateResponse = (await invoke("generate_script", {
         prompt: userPrompt,
         csvContext: {
-          csv_path: currentFilePath || undefined,
+          csvPath: currentFilePath || undefined,
           headers: data.headers,
-          row_count: data.rows.length,
-          selected_range: null,
-          filter_state: null,
-          sort_state: null,
-          column_info: null,
+          rowCount: data.rows.length,
+          selectedRange: null,
+          filterState: null,
+          sortState: null,
+          columnInfo: null,
         },
         sampleRows: sampleRows,
       })) as any;
 
-      // Normalize script from snake_case to camelCase for frontend
+      // Normalize script (Rust now returns camelCase via serde)
       const script: Script = normalizeScript(generateResponse.script) || {
         id: generateResponse.script.id,
         content: generateResponse.script.content,
-        scriptType: (generateResponse.script.script_type ?? generateResponse.script_type) as
+        scriptType: (generateResponse.script.scriptType ?? generateResponse.script.script_type) as
           | "analysis"
           | "transformation",
-        generatedAt: generateResponse.script.generated_at ?? new Date().toISOString(),
-        userPrompt: generateResponse.script.user_prompt ?? "",
+        generatedAt: generateResponse.script.generatedAt ?? generateResponse.script.generated_at ?? new Date().toISOString(),
+        userPrompt: generateResponse.script.userPrompt ?? generateResponse.script.user_prompt ?? "",
         executionState: "pending",
       };
 
       // Add assistant message with script
+      const scriptType = generateResponse.scriptType || generateResponse.script_type;
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content:
-          generateResponse.script_type === "transformation"
+          scriptType === "transformation"
             ? "I've generated a transformation script. Please review it and approve to execute."
             : "I've generated an analysis script. It will be executed automatically.",
         timestamp: new Date().toISOString(),
         script,
         metadata: {
           messageType:
-            generateResponse.script_type === "transformation" ? "transformation" : "analysis",
+            scriptType === "transformation" ? "transformation" : "analysis",
         },
       };
       addMessage(assistantMessage);
@@ -265,7 +266,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       setIsGenerating(false);
 
       // Auto-execute analysis scripts
-      if (generateResponse.script_type === "analysis") {
+      if (scriptType === "analysis") {
         await handleExecuteScript(script, false);
       } else {
         // For transformation, set pending script
@@ -321,15 +322,15 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           script: {
             id: script.id,
             content: script.content,
-            script_type: script.scriptType ?? "analysis",
-            generated_at: script.generatedAt ?? new Date().toISOString(),
-            user_prompt: script.userPrompt ?? "",
-            execution_state: script.executionState ?? "pending",
-            execution_result: script.executionResult
+            scriptType: script.scriptType ?? "analysis",
+            generatedAt: script.generatedAt ?? new Date().toISOString(),
+            userPrompt: script.userPrompt ?? "",
+            executionState: script.executionState ?? "pending",
+            executionResult: script.executionResult
               ? {
-                  execution_id: script.executionResult.executionId,
-                  started_at: script.executionResult.startedAt,
-                  completed_at: script.executionResult.completedAt,
+                  executionId: script.executionResult.executionId,
+                  startedAt: script.executionResult.startedAt,
+                  completedAt: script.executionResult.completedAt,
                   result: script.executionResult.result,
                   error: script.executionResult.error,
                 }
@@ -404,15 +405,15 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
               originalScript: {
                 id: script.id,
                 content: script.content,
-                script_type: script.scriptType ?? "analysis",
-                generated_at: script.generatedAt ?? new Date().toISOString(),
-                user_prompt: script.userPrompt ?? "",
-                execution_state: script.executionState ?? "pending",
-                execution_result: script.executionResult
+                scriptType: script.scriptType ?? "analysis",
+                generatedAt: script.generatedAt ?? new Date().toISOString(),
+                userPrompt: script.userPrompt ?? "",
+                executionState: script.executionState ?? "pending",
+                executionResult: script.executionResult
                   ? {
-                      execution_id: script.executionResult.executionId,
-                      started_at: script.executionResult.startedAt,
-                      completed_at: script.executionResult.completedAt,
+                      executionId: script.executionResult.executionId,
+                      startedAt: script.executionResult.startedAt,
+                      completedAt: script.executionResult.completedAt,
                       result: script.executionResult.result,
                       error: script.executionResult.error,
                     }
@@ -420,13 +421,13 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
               },
               errorMessage: errorMessage,
               csvContext: {
-                csv_path: currentFilePath || undefined,
+                csvPath: currentFilePath || undefined,
                 headers: data.headers,
-                row_count: data.rows.length,
-                selected_range: null,
-                filter_state: null,
-                sort_state: null,
-                column_info: null,
+                rowCount: data.rows.length,
+                selectedRange: null,
+                filterState: null,
+                sortState: null,
+                columnInfo: null,
               },
               sampleRows: sampleRows,
             })) as any;
@@ -448,11 +449,11 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
               : {
                   id: `${script.id}-fixed-${retryCount + 1}`,
                   content: fixResponse.script.content,
-                  scriptType: (fixResponse.script.script_type ?? "analysis") as
+                  scriptType: (fixResponse.script.scriptType ?? fixResponse.script.script_type ?? "analysis") as
                     | "analysis"
                     | "transformation",
-                  generatedAt: fixResponse.script.generated_at ?? new Date().toISOString(),
-                  userPrompt: fixResponse.script.user_prompt ?? "",
+                  generatedAt: fixResponse.script.generatedAt ?? fixResponse.script.generated_at ?? new Date().toISOString(),
+                  userPrompt: fixResponse.script.userPrompt ?? fixResponse.script.user_prompt ?? "",
                   executionState: "pending",
                   executionResult: {
                     executionId: "",
@@ -515,7 +516,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
             ...script,
             executionState: "failed",
             executionResult: {
-              executionId: executeResponse.execution_id,
+              executionId: executeResponse.executionId,
               startedAt: new Date().toISOString(),
               error: errorMessage,
               result: result,
@@ -537,7 +538,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         ...script,
         executionState: "completed",
         executionResult: {
-          executionId: executeResponse.execution_id,
+          executionId: executeResponse.executionId,
           startedAt: new Date().toISOString(),
           completedAt: new Date().toISOString(),
           result: executeResponse.result,
@@ -722,9 +723,9 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     };
 
     try {
-      // Convert to Rust format (snake_case for ChatHistory/ChatMessage, camelCase for Script)
-      const rustHistory = {
-        csv_path: updatedHistory.csvPath,
+      // All fields are now camelCase on Rust side (via #[serde(rename_all = "camelCase")])
+      const historyToSave = {
+        csvPath: updatedHistory.csvPath,
         messages: updatedHistory.messages.map((msg) => ({
           id: msg.id,
           role: msg.role,
@@ -732,18 +733,17 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           timestamp: msg.timestamp,
           script: msg.script
             ? {
-                // Convert Script from camelCase (frontend) to snake_case (Rust)
                 id: msg.script.id,
                 content: msg.script.content,
-                script_type: msg.script.scriptType,
-                generated_at: msg.script.generatedAt,
-                user_prompt: msg.script.userPrompt,
-                execution_state: msg.script.executionState,
-                execution_result: msg.script.executionResult
+                scriptType: msg.script.scriptType,
+                generatedAt: msg.script.generatedAt,
+                userPrompt: msg.script.userPrompt,
+                executionState: msg.script.executionState,
+                executionResult: msg.script.executionResult
                   ? {
-                      execution_id: msg.script.executionResult.executionId,
-                      started_at: msg.script.executionResult.startedAt,
-                      completed_at: msg.script.executionResult.completedAt,
+                      executionId: msg.script.executionResult.executionId,
+                      startedAt: msg.script.executionResult.startedAt,
+                      completedAt: msg.script.executionResult.completedAt,
                       result: msg.script.executionResult.result,
                       error: msg.script.executionResult.error,
                     }
@@ -751,17 +751,17 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
               }
             : null,
           metadata: {
-            message_type: msg.metadata?.messageType,
+            messageType: msg.metadata?.messageType,
             data: msg.metadata?.data,
           },
         })),
-        created_at: updatedHistory.createdAt,
-        updated_at: updatedHistory.updatedAt,
+        createdAt: updatedHistory.createdAt,
+        updatedAt: updatedHistory.updatedAt,
       };
 
       await invoke("save_chat_history", {
         csvPath: currentFilePath,
-        history: rustHistory,
+        history: historyToSave,
       });
       setCurrentHistory(updatedHistory);
     } catch (error) {
