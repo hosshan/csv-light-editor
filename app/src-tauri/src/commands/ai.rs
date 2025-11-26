@@ -1,9 +1,9 @@
 use crate::ai::{AiAssistant, DataChange};
-use crate::ai_script::{Script, ExecutionContext, ResultPayload, ScriptType};
+use crate::ai_script::{Script, ExecutionContext, ResultPayload, ScriptType, ColumnInfo};
 use crate::ai_script::generator::ScriptGenerator;
 use crate::state::{ScriptExecutorState, AppState};
 use crate::chat::ChatHistory;
-use crate::metadata::MetadataManager;
+use crate::csv_engine::data_types::{DataTypeDetector, DataType};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tauri::{State, Window};
@@ -260,15 +260,86 @@ pub struct GenerateScriptResponse {
     pub requires_approval: bool,
 }
 
+/// Analyze CSV data to extract column information (types, formats, samples)
+fn analyze_csv_columns(
+    headers: &[String],
+    sample_rows: &[Vec<String>],
+) -> Vec<ColumnInfo> {
+    let detector = DataTypeDetector::new();
+    let mut column_info = Vec::new();
+
+    for (index, header) in headers.iter().enumerate() {
+        // Get column values from sample rows
+        let column_values: Vec<String> = sample_rows
+            .iter()
+            .filter_map(|row| row.get(index))
+            .filter(|v| !v.is_empty())
+            .take(5) // First 5 non-empty values
+            .cloned()
+            .collect();
+
+        if column_values.is_empty() {
+            column_info.push(ColumnInfo {
+                column_index: index,
+                column_name: header.clone(),
+                detected_type: "text".to_string(),
+                format: None,
+                sample_values: vec![],
+            });
+            continue;
+        }
+
+        // Detect column type
+        let detected_type = detector.detect_column_type(&column_values);
+        let type_str = match detected_type {
+            DataType::Integer => "integer",
+            DataType::Float => "float",
+            DataType::Boolean => "boolean",
+            DataType::Date => "date",
+            DataType::DateTime => "datetime",
+            DataType::Email => "email",
+            DataType::Url => "url",
+            DataType::Json => "json",
+            DataType::Text => "text",
+        };
+
+        // Detect format for datetime columns
+        let format = if matches!(detected_type, DataType::DateTime) {
+            detector.detect_column_datetime_format(&column_values)
+        } else {
+            None
+        };
+
+        column_info.push(ColumnInfo {
+            column_index: index,
+            column_name: header.clone(),
+            detected_type: type_str.to_string(),
+            format,
+            sample_values: column_values,
+        });
+    }
+
+    column_info
+}
+
 /// Generate a Python script from user prompt
 #[tauri::command]
 pub async fn generate_script(
     prompt: String,
     csv_context: ExecutionContext,
+    sample_rows: Option<Vec<Vec<String>>>, // First 5 rows for analysis
 ) -> Result<GenerateScriptResponse, String> {
+    // Analyze column information if sample rows are provided
+    let mut context_with_info = csv_context.clone();
+    if let Some(rows) = sample_rows {
+        let column_info = analyze_csv_columns(&csv_context.headers, &rows);
+        context_with_info.column_info = Some(column_info);
+        log::info!("[COMMAND] Analyzed {} columns with sample data", context_with_info.column_info.as_ref().unwrap().len());
+    }
+
     let generator = ScriptGenerator::new();
     
-    match generator.generate_script(&prompt, &csv_context).await {
+    match generator.generate_script(&prompt, &context_with_info).await {
         Ok(script) => {
             let script_type_str = match &script.script_type {
                 ScriptType::Analysis => "analysis",
@@ -294,6 +365,53 @@ pub async fn generate_script(
                 "Rate limit exceeded. Please wait a moment and try again.".to_string()
             } else {
                 format!("Failed to generate script: {}", e)
+            };
+            Err(error_msg)
+        }
+    }
+}
+
+/// Fix a script that failed execution
+#[tauri::command]
+pub async fn fix_script(
+    original_prompt: String,
+    original_script: Script,
+    error_message: String,
+    csv_context: ExecutionContext,
+    sample_rows: Option<Vec<Vec<String>>>, // First 5 rows for analysis
+) -> Result<GenerateScriptResponse, String> {
+    // Analyze column information if sample rows are provided
+    let mut context_with_info = csv_context.clone();
+    if let Some(rows) = sample_rows {
+        let column_info = analyze_csv_columns(&csv_context.headers, &rows);
+        context_with_info.column_info = Some(column_info);
+        log::info!("[COMMAND] Analyzed {} columns for script fix", context_with_info.column_info.as_ref().unwrap().len());
+    }
+
+    let generator = ScriptGenerator::new();
+    
+    match generator.fix_script(&original_prompt, &original_script, &error_message, &context_with_info).await {
+        Ok(script) => {
+            let script_type_str = match &script.script_type {
+                ScriptType::Analysis => "analysis",
+                ScriptType::Transformation => "transformation",
+            };
+            let requires_approval = matches!(&script.script_type, ScriptType::Transformation);
+            
+            Ok(GenerateScriptResponse {
+                script,
+                script_type: script_type_str.to_string(),
+                requires_approval,
+            })
+        }
+        Err(e) => {
+            let error_str = e.to_string();
+            let error_msg = if error_str.contains("API key") || error_str.contains("authentication") {
+                "API key not configured. Please set your API key in settings.".to_string()
+            } else if error_str.contains("network") || error_str.contains("fetch") {
+                "Network error. Please check your internet connection.".to_string()
+            } else {
+                format!("Failed to fix script: {}", e)
             };
             Err(error_msg)
         }
@@ -339,8 +457,24 @@ pub async fn execute_script(
 
     let executor = executor_state.0.lock().await;
     
+    log::info!("[COMMAND] execute_script: Starting execution for script type: {:?}", script.script_type);
     match executor.execute_script(&script, &csv_data.headers, &csv_data.rows, Some(window)).await {
         Ok(execution_result) => {
+            log::info!("[COMMAND] execute_script: Execution completed, execution_id: {}", execution_result.execution_id);
+            
+            // Log result type for debugging
+            match &execution_result.result {
+                ResultPayload::Analysis { summary, .. } => {
+                    log::info!("[COMMAND] execute_script: Result type: Analysis, summary: {}", summary);
+                }
+                ResultPayload::Transformation { changes, .. } => {
+                    log::info!("[COMMAND] execute_script: Result type: Transformation, changes: {}", changes.len());
+                }
+                ResultPayload::Error { message } => {
+                    log::warn!("[COMMAND] execute_script: Result type: Error, message: {}", message);
+                }
+            }
+            
             let changes = match &execution_result.result {
                 ResultPayload::Transformation { changes, .. } => Some(changes.clone()),
                 _ => None,
@@ -353,6 +487,7 @@ pub async fn execute_script(
             })
         }
                 Err(e) => {
+                    log::error!("[COMMAND] execute_script: Execution failed: {}", e);
                     let error_str = e.to_string();
                     let error_msg = if error_str.contains("security") || error_str.contains("validation") {
                         "The script contains potentially unsafe operations and was blocked for security reasons.".to_string()

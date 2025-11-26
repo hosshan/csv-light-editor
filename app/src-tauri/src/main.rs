@@ -123,6 +123,7 @@ fn main() {
             commands::ai::ai_execute,
             commands::ai::ai_apply_changes,
             commands::ai::generate_script,
+            commands::ai::fix_script,
             commands::ai::execute_script,
             commands::ai::get_script_progress,
             commands::ai::cancel_script_execution,

@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Script {
     pub id: String,
     pub content: String,
@@ -83,6 +84,17 @@ pub struct ExecutionContext {
     pub selected_range: Option<SelectionRange>,
     pub filter_state: Option<serde_json::Value>,
     pub sort_state: Option<serde_json::Value>,
+    pub column_info: Option<Vec<ColumnInfo>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ColumnInfo {
+    pub column_index: usize,
+    pub column_name: String,
+    pub detected_type: String, // "integer", "float", "date", "datetime", "text", etc.
+    pub format: Option<String>, // For datetime: "%Y-%m-%d %H:%M", etc.
+    pub sample_values: Vec<String>, // First 5 non-empty values
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

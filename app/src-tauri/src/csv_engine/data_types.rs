@@ -50,6 +50,45 @@ impl DataTypeDetector {
             .unwrap_or(DataType::Text)
     }
 
+    /// Detect the actual datetime format used in a value
+    pub fn detect_datetime_format(&self, value: &str) -> Option<String> {
+        let datetime_formats = [
+            ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"),
+            ("%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M"),
+            ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S"),
+            ("%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M"),
+            ("%Y/%m/%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"),
+            ("%Y/%m/%d %H:%M", "%Y/%m/%d %H:%M"),
+            ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M:%S"),
+            ("%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M"),
+            ("%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M:%S"),
+            ("%m/%d/%Y %H:%M", "%m/%d/%Y %H:%M"),
+        ];
+        
+        for (format, _) in &datetime_formats {
+            if NaiveDateTime::parse_from_str(value, format).is_ok() {
+                return Some(format.to_string());
+            }
+        }
+        None
+    }
+
+    /// Detect the most common datetime format in a column
+    pub fn detect_column_datetime_format(&self, values: &[String]) -> Option<String> {
+        let mut format_counts = std::collections::HashMap::new();
+        
+        for value in values.iter().filter(|v| !v.is_empty()) {
+            if let Some(format) = self.detect_datetime_format(value) {
+                *format_counts.entry(format).or_insert(0) += 1;
+            }
+        }
+        
+        format_counts
+            .into_iter()
+            .max_by_key(|(_, count)| *count)
+            .map(|(format, _)| format)
+    }
+
     pub fn detect_value_type(&self, value: &str) -> DataType {
         if value.is_empty() {
             return DataType::Text;
@@ -77,10 +116,24 @@ impl DataTypeDetector {
             return DataType::Date;
         }
 
-        // Check datetime formats
-        if NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S").is_ok() ||
-           NaiveDateTime::parse_from_str(value, "%Y-%m-%dT%H:%M:%S").is_ok() {
-            return DataType::DateTime;
+        // Check datetime formats (with various time formats)
+        let datetime_formats = [
+            "%Y-%m-%d %H:%M:%S",      // 2025-10-01 09:00:00
+            "%Y-%m-%d %H:%M",         // 2025-10-01 09:00 (no seconds)
+            "%Y-%m-%dT%H:%M:%S",      // 2025-10-01T09:00:00
+            "%Y-%m-%dT%H:%M",         // 2025-10-01T09:00 (no seconds)
+            "%Y/%m/%d %H:%M:%S",      // 2025/10/01 09:00:00
+            "%Y/%m/%d %H:%M",         // 2025/10/01 09:00
+            "%d/%m/%Y %H:%M:%S",      // 01/10/2025 09:00:00
+            "%d/%m/%Y %H:%M",         // 01/10/2025 09:00
+            "%m/%d/%Y %H:%M:%S",      // 10/01/2025 09:00:00
+            "%m/%d/%Y %H:%M",         // 10/01/2025 09:00
+        ];
+        
+        for format in &datetime_formats {
+            if NaiveDateTime::parse_from_str(value, format).is_ok() {
+                return DataType::DateTime;
+            }
         }
 
         // Check email

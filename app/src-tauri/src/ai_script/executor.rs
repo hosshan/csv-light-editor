@@ -41,12 +41,17 @@ impl ScriptExecutor {
         rows: &[Vec<String>],
         window: Option<tauri::Window>,
     ) -> Result<ExecutionResult> {
+        log::info!("[EXECUTE] Starting script execution");
+        
         // Security validation
+        log::info!("[EXECUTE] Step 1/8: Validating script security");
         self.security_validator.validate_script(&script.content)?;
+        log::info!("[EXECUTE] Step 1/8: Security validation passed");
 
         // Create execution ID
         let execution_id = Uuid::new_v4().to_string();
         let total_rows = rows.len();
+        log::info!("[EXECUTE] Step 2/8: Created execution ID: {}, total rows: {}", execution_id, total_rows);
 
         // Create progress tracker
         let progress = Arc::new(Mutex::new(ExecutionProgress::new(execution_id.clone(), total_rows)));
@@ -58,8 +63,15 @@ impl ScriptExecutor {
             "rows": rows,
         });
 
+        // Log script content for debugging
+        log::debug!("Executing script (first 500 chars): {}", 
+            script.content.chars().take(500).collect::<String>());
+        log::debug!("Script path will be: {:?}", 
+            std::env::temp_dir().join(format!("csv_script_*.py")));
+
         // Create temporary script file
         let script_path = self.create_temp_script(&script.content)?;
+        log::info!("Created temporary script at: {:?}", script_path);
         let script_path_clone = script_path.clone();
 
         // Create cancellation flag
@@ -69,6 +81,7 @@ impl ScriptExecutor {
         let csv_data_clone = csv_data.clone();
 
         // Spawn execution task
+        log::info!("[EXECUTE] Step 6/8: Spawning execution task");
         let handle = tokio::spawn(async move {
             Self::execute_script_internal(
                 script_path_clone,
@@ -82,6 +95,7 @@ impl ScriptExecutor {
         });
 
         // Store active execution
+        log::info!("[EXECUTE] Step 7/8: Storing active execution");
         let active_execution = ActiveExecution {
             handle,
             progress,
@@ -92,19 +106,26 @@ impl ScriptExecutor {
         executions.insert(execution_id.clone(), active_execution);
 
         // Wait for execution to complete
+        log::info!("[EXECUTE] Step 8/8: Waiting for execution to complete");
         let result = {
             let mut executions = self.active_executions.lock().await;
             if let Some(exec) = executions.remove(&execution_id) {
                 drop(executions); // Release lock before awaiting
-                exec.handle.await?
+                log::info!("[EXECUTE] Awaiting task completion...");
+                let result = exec.handle.await?;
+                log::info!("[EXECUTE] Task completed, execution_id: {}", result.as_ref().map(|r| r.execution_id.as_str()).unwrap_or("error"));
+                result
             } else {
+                log::error!("[EXECUTE] Execution not found in active executions");
                 return Err(anyhow!("Execution not found"));
             }
         };
 
         // Clean up temp file
+        log::info!("[EXECUTE] Cleaning up temporary script file");
         let _ = std::fs::remove_file(&script_path);
 
+        log::info!("[EXECUTE] Script execution completed successfully");
         result
     }
 
@@ -112,38 +133,77 @@ impl ScriptExecutor {
         script_path: PathBuf,
         csv_data: &serde_json::Value,
         execution_id: &str,
-        total_rows: usize,
+        _total_rows: usize,
         cancelled: Arc<Mutex<bool>>,
         progress_tracker: Option<Arc<Mutex<ExecutionProgress>>>,
         window: Option<tauri::Window>,
     ) -> Result<ExecutionResult> {
         let started_at = Utc::now();
+        log::info!("[INTERNAL] Starting execute_script_internal for execution_id: {}", execution_id);
+        log::info!("[INTERNAL] Script path: {:?}", script_path);
 
         // Start Python process
+        log::info!("[INTERNAL] Step A: Starting Python process");
         let mut child = Command::new("python3")
             .arg("-u") // Unbuffered output
-            .arg(script_path)
+            .arg(&script_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .env("PYTHONPATH", "") // Restrict module imports
             .env("PYTHONDONTWRITEBYTECODE", "1")
             .spawn()
-            .map_err(|e| anyhow!("Failed to start Python process: {}", e))?;
+            .map_err(|e| {
+                log::error!("[INTERNAL] Failed to start Python process: {}", e);
+                anyhow!("Failed to start Python process: {}", e)
+            })?;
+        log::info!("[INTERNAL] Step A: Python process started (PID: {:?})", child.id());
 
         // Write CSV data to stdin
+        log::info!("[INTERNAL] Step B: Writing CSV data to stdin");
         if let Some(mut stdin) = child.stdin.take() {
-            let json_str = serde_json::to_string(csv_data)?;
-            stdin.write_all(json_str.as_bytes())?;
-            stdin.flush()?;
+            let json_str = serde_json::to_string(csv_data)
+                .map_err(|e| {
+                    log::error!("[INTERNAL] Failed to serialize CSV data: {}", e);
+                    e
+                })?;
+            log::info!("[INTERNAL] JSON data size: {} bytes (first 200 chars: {})", 
+                json_str.len(),
+                json_str.chars().take(200).collect::<String>());
+            
+            stdin.write_all(json_str.as_bytes())
+                .map_err(|e| {
+                    log::error!("[INTERNAL] Failed to write to stdin: {}", e);
+                    e
+                })?;
+            stdin.write_all(b"\n")
+                .map_err(|e| {
+                    log::error!("[INTERNAL] Failed to write newline to stdin: {}", e);
+                    e
+                })?;
+            stdin.flush()
+                .map_err(|e| {
+                    log::error!("[INTERNAL] Failed to flush stdin: {}", e);
+                    e
+                })?;
+            log::info!("[INTERNAL] Step B: Finished writing to stdin");
+        } else {
+            log::error!("[INTERNAL] Step B: Failed to capture stdin for Python process");
+            return Err(anyhow!("Failed to capture stdin for Python process"));
         }
 
         // Read stdout for progress and results
-        let stdout = child.stdout.take().ok_or_else(|| anyhow!("Failed to capture stdout"))?;
+        log::info!("[INTERNAL] Step C: Capturing stdout");
+        let stdout = child.stdout.take().ok_or_else(|| {
+            log::error!("[INTERNAL] Failed to capture stdout");
+            anyhow!("Failed to capture stdout")
+        })?;
         let reader = BufReader::new(stdout);
         let mut output_lines = Vec::new();
 
         // Stream output
+        log::info!("[INTERNAL] Step D: Starting to read stdout from Python process");
+        let mut line_count = 0;
         for line in reader.lines() {
             // Check if cancelled
             {
@@ -154,7 +214,12 @@ impl ScriptExecutor {
                 }
             }
 
-            let line = line?;
+            let line = line.map_err(|e| {
+                log::error!("[INTERNAL] Failed to read line from stdout: {}", e);
+                e
+            })?;
+            line_count += 1;
+            log::info!("[INTERNAL] Step D: Received line #{} from Python: {}", line_count, line);
             output_lines.push(line.clone());
 
             // Try to parse as progress update
@@ -194,12 +259,19 @@ impl ScriptExecutor {
         }
 
         // Wait for process to complete
-        let status = child.wait()?;
+        log::info!("[INTERNAL] Step E: Finished reading stdout ({} lines total), waiting for Python process to complete...", line_count);
+        let status = child.wait().map_err(|e| {
+            log::error!("[INTERNAL] Failed to wait for Python process: {}", e);
+            e
+        })?;
+        log::info!("[INTERNAL] Step E: Python process completed with status: {:?} (success: {})", status, status.success());
 
         let completed_at = Some(Utc::now());
 
         // Parse result from last non-progress line
+        log::info!("[INTERNAL] Step F: Parsing result from output ({} lines available)", output_lines.len());
         let result = if status.success() {
+            log::info!("[INTERNAL] Step F: Process succeeded, looking for result JSON");
             // Find the last JSON result (not progress)
             let result_line = output_lines
                 .iter()
@@ -211,19 +283,35 @@ impl ScriptExecutor {
                         false
                     }
                 })
-                .ok_or_else(|| anyhow!("No result found in script output"))?;
+                .ok_or_else(|| {
+                    log::error!("[INTERNAL] No result found in script output. Available lines: {:?}", output_lines);
+                    anyhow!("No result found in script output")
+                })?;
 
-            Self::parse_result(result_line)?
+            log::info!("[INTERNAL] Step F: Found result line: {}", result_line);
+            let parsed_result = Self::parse_result(result_line)?;
+            log::info!("[INTERNAL] Step F: Successfully parsed result");
+            parsed_result
         } else {
+            log::warn!("[INTERNAL] Step F: Process failed, reading stderr");
             // Read stderr for error message
             let stderr = child.stderr.take();
             let error_msg = if let Some(stderr) = stderr {
                 let mut reader = BufReader::new(stderr);
                 let mut error_text = String::new();
-                reader.read_to_string(&mut error_text)?;
-                error_text.trim().to_string()
+                reader.read_to_string(&mut error_text)
+                    .map_err(|e| {
+                        log::error!("[INTERNAL] Failed to read stderr: {}", e);
+                        e
+                    })?;
+                log::error!("[INTERNAL] Python stderr: {}", error_text);
+                
+                // Parse Python error message to make it more user-friendly
+                let user_friendly_error = Self::parse_python_error(&error_text);
+                user_friendly_error
             } else {
-                "Script execution failed".to_string()
+                log::warn!("[INTERNAL] No stderr available");
+                "Script execution failed. Please check the generated script for errors.".to_string()
             };
 
             ResultPayload::Error {
@@ -231,13 +319,114 @@ impl ScriptExecutor {
             }
         };
 
-        Ok(ExecutionResult {
+        log::info!("[INTERNAL] Step G: Creating ExecutionResult");
+        let execution_result = ExecutionResult {
             execution_id: execution_id.to_string(),
             started_at,
             completed_at,
             result,
             error: if status.success() { None } else { Some("Script execution failed".to_string()) },
-        })
+        };
+        log::info!("[INTERNAL] Step G: ExecutionResult created successfully");
+        log::info!("[INTERNAL] execute_script_internal completed for execution_id: {}", execution_id);
+        Ok(execution_result)
+    }
+
+    /// Parse Python error message to make it more user-friendly
+    fn parse_python_error(stderr: &str) -> String {
+        let error_lines: Vec<&str> = stderr.lines().collect();
+        
+        // Look for common Python error patterns
+        for line in &error_lines {
+            if line.contains("IndentationError") {
+                if let Some(detail) = error_lines.iter().find(|l| l.contains("unexpected indent") || l.contains("expected an indented block")) {
+                    return format!("Python indentation error: The generated script has incorrect indentation. This is usually caused by the AI model generating code with inconsistent spacing. Please try regenerating the script.\n\nDetails: {}", detail.trim());
+                }
+                return "Python indentation error: The generated script has incorrect indentation. Please try regenerating the script.".to_string();
+            }
+            if line.contains("SyntaxError") {
+                if let Some(detail) = error_lines.iter().find(|l| l.contains("invalid syntax")) {
+                    return format!("Python syntax error: The generated script contains invalid syntax.\n\nDetails: {}", detail.trim());
+                }
+                return "Python syntax error: The generated script contains invalid syntax. Please try regenerating the script.".to_string();
+            }
+            if line.contains("NameError") {
+                if let Some(detail) = error_lines.iter().find(|l| l.contains("is not defined")) {
+                    let error_msg = if let Some(msg_line) = error_lines.iter().find(|l| l.contains("NameError:")) {
+                        msg_line.trim()
+                    } else {
+                        detail.trim()
+                    };
+                    return format!("Python name error: A variable or function is used but not defined. This usually means the generated script is missing variable definitions or has incorrect variable names.\n\nDetails: {}", error_msg);
+                }
+                return "Python name error: A variable or function is used but not defined. Please try regenerating the script.".to_string();
+            }
+            if line.contains("TypeError") {
+                if let Some(detail) = error_lines.iter().find(|l| l.contains("unsupported operand") || l.contains("not supported")) {
+                    return format!("Python type error: An operation is performed on incompatible types.\n\nDetails: {}", detail.trim());
+                }
+                return "Python type error: An operation is performed on incompatible types. Please try regenerating the script.".to_string();
+            }
+            if line.contains("AttributeError") {
+                if let Some(detail) = error_lines.iter().find(|l| l.contains("has no attribute")) {
+                    return format!("Python attribute error: An object doesn't have the expected attribute.\n\nDetails: {}", detail.trim());
+                }
+                return "Python attribute error: An object doesn't have the expected attribute. Please try regenerating the script.".to_string();
+            }
+            if line.contains("ValueError") {
+                // Check for specific ValueError patterns
+                if let Some(detail) = error_lines.iter().find(|l| l.contains("time data") && l.contains("does not match format")) {
+                    return format!("Data format error: The script expected a different date/time format than what's in your CSV data. The generated script may need to be adjusted to match your actual data format.\n\nDetails: {}", detail.trim());
+                }
+                if let Some(detail) = error_lines.iter().find(|l| l.contains("ValueError")) {
+                    // Extract the actual error message
+                    let error_msg = if let Some(msg_line) = error_lines.iter().find(|l| l.starts_with("ValueError:")) {
+                        msg_line.trim()
+                    } else {
+                        detail.trim()
+                    };
+                    return format!("Data value error: The script encountered invalid data values.\n\nDetails: {}", error_msg);
+                }
+                return "Python value error: The script encountered invalid data values. Please check your CSV data or try regenerating the script.".to_string();
+            }
+            if line.contains("KeyError") {
+                if let Some(detail) = error_lines.iter().find(|l| l.contains("KeyError")) {
+                    let error_msg = if let Some(msg_line) = error_lines.iter().find(|l| l.starts_with("KeyError:")) {
+                        msg_line.trim()
+                    } else {
+                        detail.trim()
+                    };
+                    return format!("Data key error: The script tried to access a column or key that doesn't exist in your data.\n\nDetails: {}", error_msg);
+                }
+                return "Python key error: The script tried to access a column or key that doesn't exist. Please check your CSV data or try regenerating the script.".to_string();
+            }
+            if line.contains("IndexError") {
+                if let Some(detail) = error_lines.iter().find(|l| l.contains("IndexError")) {
+                    let error_msg = if let Some(msg_line) = error_lines.iter().find(|l| l.starts_with("IndexError:")) {
+                        msg_line.trim()
+                    } else {
+                        detail.trim()
+                    };
+                    return format!("Data index error: The script tried to access a row or column index that doesn't exist.\n\nDetails: {}", error_msg);
+                }
+                return "Python index error: The script tried to access a row or column index that doesn't exist. Please check your CSV data or try regenerating the script.".to_string();
+            }
+        }
+        
+        // If no specific error pattern found, return the first few lines of the error
+        let error_summary: String = error_lines
+            .iter()
+            .take(5)
+            .map(|l| l.trim())
+            .filter(|l| !l.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n");
+        
+        if error_summary.is_empty() {
+            "Script execution failed. Please check the generated script for errors.".to_string()
+        } else {
+            format!("Script execution failed:\n\n{}", error_summary)
+        }
     }
 
     fn parse_result(result_line: &str) -> Result<ResultPayload> {
@@ -246,10 +435,22 @@ impl ScriptExecutor {
 
         match json.get("type").and_then(|v| v.as_str()) {
             Some("analysis") => {
-                let summary = json.get("summary")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Analysis completed")
-                    .to_string();
+                // Handle summary as string, object, or array
+                let summary = match json.get("summary") {
+                    Some(v) if v.is_string() => {
+                        v.as_str().unwrap_or("Analysis completed").to_string()
+                    }
+                    Some(v) if v.is_object() || v.is_array() => {
+                        // Convert object/array to formatted JSON string
+                        serde_json::to_string_pretty(v)
+                            .unwrap_or_else(|_| "Analysis completed".to_string())
+                    }
+                    Some(v) => {
+                        // For other types, convert to string
+                        v.to_string()
+                    }
+                    None => "Analysis completed".to_string(),
+                };
                 let details = json.get("details").cloned().unwrap_or(serde_json::json!({}));
                 Ok(ResultPayload::Analysis { summary, details })
             }

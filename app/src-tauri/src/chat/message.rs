@@ -12,6 +12,7 @@ pub struct ChatMessage {
     pub content: String,
     pub timestamp: DateTime<Utc>,
     pub script: Option<Script>,
+    #[serde(default)]
     pub metadata: MessageMetadata,
 }
 

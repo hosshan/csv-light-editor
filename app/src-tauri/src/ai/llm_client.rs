@@ -304,12 +304,37 @@ impl OpenAiClient {
             String::new()
         };
 
+        // Add column information if available
+        let column_info = if let Some(ref columns) = context.column_info {
+            let mut info_lines = vec!["\nColumn Information:".to_string()];
+            for col in columns {
+                let mut col_info = format!("  - {} (index {}): type={}", col.column_name, col.column_index, col.detected_type);
+                if let Some(ref format) = col.format {
+                    col_info.push_str(&format!(", format=\"{}\"", format));
+                }
+                if !col.sample_values.is_empty() {
+                    col_info.push_str(&format!(", samples=[{}]", col.sample_values.join(", ")));
+                }
+                info_lines.push(col_info);
+            }
+            info_lines.join("\n")
+        } else {
+            String::new()
+        };
+
         format!(
             r#"You are a Python code generator for CSV data manipulation in CSV Light Editor.
 
 Your task is to generate Python code that processes CSV data according to user requests.
 
-CSV Context:{}{}
+CSV Context:{}{}{}
+
+IMPORTANT: Pay close attention to the column information above, especially datetime formats. 
+When parsing datetime values, use the EXACT format specified in the column information.
+For example, if a column shows format="%Y-%m-%d %H:%M", use datetime.strptime(value, "%Y-%m-%d %H:%M") NOT "%Y-%m-%d %H:%M:%S".
+
+NOTE: The template already imports "from datetime import datetime", so you can use datetime.strptime() directly.
+Do NOT use "import datetime" or "datetime.datetime.strptime" - just use "datetime.strptime()".
 
 Requirements:
 1. Generate ONLY the Python code for the operation (the code that goes in the {{generated_code}} section)
@@ -336,7 +361,7 @@ Requirements:
 9. Progress updates: Print progress as JSON: {{"type": "progress", "processed": int, "total": int, "step": str}}
 
 Generate ONLY the Python code, no explanations, no markdown formatting."#,
-            sample_rows, selected_range_info
+            sample_rows, selected_range_info, column_info
         )
     }
 }

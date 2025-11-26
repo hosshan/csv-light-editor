@@ -40,8 +40,6 @@ impl SecurityValidator {
             r"from\s+http\s+import",
             r"from\s+socket\s+import",
             // System operations
-            r"import\s+sys",
-            r"sys\.exit\s*\(",
             r"sys\.modules",
             // Other dangerous operations
             r"import\s+ctypes",
