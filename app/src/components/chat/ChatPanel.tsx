@@ -343,6 +343,8 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           },
         })) as any;
         console.log("[ChatPanel] invoke completed successfully");
+        console.log("[ChatPanel] executeResponse type:", typeof executeResponse);
+        console.log("[ChatPanel] executeResponse keys:", executeResponse ? Object.keys(executeResponse) : "null");
       } catch (invokeError) {
         console.error("[ChatPanel] invoke failed with error:", invokeError);
         console.error("[ChatPanel] invoke error type:", typeof invokeError);

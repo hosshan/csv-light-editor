@@ -7,9 +7,12 @@ use crate::chat::message::ChatMessage;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatHistory {
+    #[serde(alias = "csv_path")]
     pub csv_path: String,
     pub messages: Vec<ChatMessage>,
+    #[serde(alias = "created_at")]
     pub created_at: DateTime<Utc>,
+    #[serde(alias = "updated_at")]
     pub updated_at: DateTime<Utc>,
 }
 

@@ -27,6 +27,7 @@ pub enum MessageRole {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct MessageMetadata {
+    #[serde(alias = "message_type")]
     pub message_type: Option<MessageType>,
     pub data: Option<serde_json::Value>,
 }
