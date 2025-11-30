@@ -78,7 +78,7 @@ impl ScriptGenerator {
     ) -> Result<Script> {
         log::info!("[GENERATOR] Attempting to fix script with error: {}", error_message);
 
-        // Create a fix prompt that includes the error
+        // Create a fix prompt that includes the error (for LLM only, not for script header)
         let fix_prompt = format!(
             "{}\n\nIMPORTANT: The previous script failed with this error:\n{}\n\nPlease generate a corrected version that fixes this issue. Pay special attention to:\n- Date/time format matching (the actual data format may differ from what was assumed)\n- Column names and indices\n- Data types and conversions\n- Indentation and syntax",
             original_prompt,
@@ -88,15 +88,15 @@ impl ScriptGenerator {
         // Detect script type (should be the same as original)
         let script_type = &original_script.script_type;
 
-        // Generate fixed Python code using LLM
+        // Generate fixed Python code using LLM (use fix_prompt with error context)
         let generated_code = if let Some(llm_client) = &self.llm_client {
             llm_client.generate_script(&fix_prompt, context).await?
         } else {
             return Err(anyhow!("AI features are disabled. Please configure API key."));
         };
 
-        // Wrap generated code in template
-        let full_script = Self::wrap_in_template(&generated_code, &fix_prompt, script_type);
+        // Wrap generated code in template (use original_prompt for clean header, not fix_prompt)
+        let full_script = Self::wrap_in_template(&generated_code, original_prompt, script_type);
 
         log::info!("[GENERATOR] Fixed script generated, length: {} chars", full_script.len());
 
