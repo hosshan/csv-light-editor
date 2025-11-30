@@ -342,7 +342,9 @@ if __name__ == "__main__":
 
 ##### `fix_script(originalPrompt, script, error, context)`
 
-エラー情報を元プロンプトに追加して再生成:
+エラー情報を含む修正プロンプトを作成してLLMに送信し、再生成:
+
+**修正プロンプト (LLMに送信)**:
 ```
 <original_prompt>
 
@@ -355,6 +357,8 @@ Please generate a corrected version that fixes this issue. Pay special attention
 - Data types and conversions
 - Indentation and syntax
 ```
+
+**重要**: 生成されるPythonスクリプトのヘッダーコメントには、エラー情報を含まない元の`original_prompt`のみを使用します。これにより、Pythonの構文エラー（コロンや特殊文字によるSyntaxError）を防止します。
 
 #### executor.rs (app/src-tauri/src/ai_script/executor.rs)
 
