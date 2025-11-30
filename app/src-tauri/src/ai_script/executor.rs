@@ -64,9 +64,8 @@ impl ScriptExecutor {
         });
 
         // Log script content for debugging
-        log::debug!("Executing script (first 500 chars): {}", 
-            script.content.chars().take(500).collect::<String>());
-        log::debug!("Script path will be: {:?}", 
+        log::info!("[EXECUTE] Generated Python script content:\n{}", script.content);
+        log::debug!("Script path will be: {:?}",
             std::env::temp_dir().join(format!("csv_script_*.py")));
 
         // Create temporary script file
@@ -102,8 +101,10 @@ impl ScriptExecutor {
             cancelled,
         };
 
-        let mut executions = self.active_executions.lock().await;
-        executions.insert(execution_id.clone(), active_execution);
+        {
+            let mut executions = self.active_executions.lock().await;
+            executions.insert(execution_id.clone(), active_execution);
+        } // Release lock here
 
         // Wait for execution to complete
         log::info!("[EXECUTE] Step 8/8: Waiting for execution to complete");
@@ -112,9 +113,16 @@ impl ScriptExecutor {
             if let Some(exec) = executions.remove(&execution_id) {
                 drop(executions); // Release lock before awaiting
                 log::info!("[EXECUTE] Awaiting task completion...");
-                let result = exec.handle.await?;
-                log::info!("[EXECUTE] Task completed, execution_id: {}", result.as_ref().map(|r| r.execution_id.as_str()).unwrap_or("error"));
-                result
+                match exec.handle.await {
+                    Ok(result) => {
+                        log::info!("[EXECUTE] Task completed, execution_id: {}", result.as_ref().map(|r| r.execution_id.as_str()).unwrap_or("error"));
+                        result
+                    }
+                    Err(join_error) => {
+                        log::error!("[EXECUTE] Task join error: {:?}", join_error);
+                        return Err(anyhow!("Task execution failed: {}", join_error));
+                    }
+                }
             } else {
                 log::error!("[EXECUTE] Execution not found in active executions");
                 return Err(anyhow!("Execution not found"));

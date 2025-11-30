@@ -582,6 +582,15 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         isAnalysis
       );
 
+      // Remove progress message before adding result
+      const currentMessagesBeforeResult = useChatStore.getState().messages;
+      const progressMessageId = `progress-${executeResponse.executionId}`;
+      const filteredMessages = currentMessagesBeforeResult.filter((m) => m.id !== progressMessageId);
+      if (filteredMessages.length < currentMessagesBeforeResult.length) {
+        console.log("[ChatPanel] Removed progress message:", progressMessageId);
+        useChatStore.getState().setMessages(filteredMessages);
+      }
+
       const resultMessage: ChatMessage = {
         id: `result-${Date.now()}`,
         role: "assistant",
@@ -657,6 +666,19 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       }
 
       console.log("[ChatPanel] Showing error message:", errorMessageText);
+
+      // Remove progress message before adding error
+      const currentMessagesBeforeError = useChatStore.getState().messages;
+      const progressMessagesToRemove = currentMessagesBeforeError.filter((m) =>
+        m.id.startsWith('progress-') && m.metadata?.messageType === 'progress'
+      );
+      if (progressMessagesToRemove.length > 0) {
+        const filteredMessages = currentMessagesBeforeError.filter((m) =>
+          !m.id.startsWith('progress-') || m.metadata?.messageType !== 'progress'
+        );
+        console.log("[ChatPanel] Removed progress messages:", progressMessagesToRemove.length);
+        useChatStore.getState().setMessages(filteredMessages);
+      }
 
       const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,
