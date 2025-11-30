@@ -496,7 +496,11 @@ impl ScriptExecutor {
                     })
                     .unwrap_or_default();
 
-                Ok(ResultPayload::Transformation { changes, preview })
+                Ok(ResultPayload::Transformation {
+                    changes: Some(changes),
+                    unified_changes: None,  // TODO: Parse unified_changes from Python output
+                    preview
+                })
             }
             Some("error") => {
                 let message = json.get("message")
