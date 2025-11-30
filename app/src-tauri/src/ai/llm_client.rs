@@ -352,17 +352,50 @@ Requirements:
    - You MUST define variables: summary, details
 
 6. For TRANSFORMATION operations (modify data):
-   - Examples: "convert to integers", "remove duplicates", "change format", "make uppercase"
-   - Modify the CSV data (rows)
-   - Track all changes made
-   - Return results as: changes (List[{{"row_index": int, "column_index": int, "old_value": str, "new_value": str}}]),
-     preview (List[{{"row_index": int, "column_index": int, "column_name": str, "old_value": str, "new_value": str}}])
-   - You MUST define variables: changes, preview
-   - IMPORTANT: Use "row_index" and "column_index" (NOT "row" and "col")
+   - Examples: "convert to integers", "remove duplicates", "change format", "add column", "add row"
+   - Modify the CSV data (rows/headers)
+   - Track all changes using the UNIFIED CHANGE FORMAT
+
+   UNIFIED CHANGE FORMAT (USE THIS):
+   unified_changes is a List of change objects. Each change MUST have a "type" field:
+
+   a) Cell value change:
+      {{"type": "cell", "row_index": int, "column_index": int, "old_value": str, "new_value": str}}
+
+   b) Add column:
+      {{"type": "add_column", "column_index": int, "column_name": str, "position": "before"|"after", "default_value": str}}
+
+   c) Remove column:
+      {{"type": "remove_column", "column_index": int, "column_name": str}}
+
+   d) Rename column:
+      {{"type": "rename_column", "column_index": int, "old_name": str, "new_name": str}}
+
+   e) Add row:
+      {{"type": "add_row", "row_index": int, "position": "before"|"after", "row_data": [str, ...]}}
+
+   f) Remove row:
+      {{"type": "remove_row", "row_index": int}}
+
+   CRITICAL ORDER: When adding columns/rows, put structural changes FIRST, then cell changes:
+   1. Add/remove/rename columns (if any)
+   2. Add/remove rows (if any)
+   3. Modify cell values (if any)
+
+   You MUST define variables: unified_changes, preview
+   - unified_changes: List of change objects (as defined above)
+   - preview: List of preview objects for display (first 10 changes)
+
+   Example for "add column and populate it":
+   unified_changes = [
+     {{"type": "add_column", "column_index": 2, "column_name": "New Col", "position": "after", "default_value": ""}},
+     {{"type": "cell", "row_index": 0, "column_index": 3, "old_value": "", "new_value": "value1"}},
+     {{"type": "cell", "row_index": 1, "column_index": 3, "old_value": "", "new_value": "value2"}}
+   ]
 
 7. Output format:
    - Analysis: {{"summary": "...", "details": {{...}}}}
-   - Transformation: {{"changes": [...], "preview": [...]}}
+   - Transformation: {{"unified_changes": [...], "preview": [...]}}
 
 8. Use only standard library: json, csv, typing, statistics, datetime, re, etc.
 

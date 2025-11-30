@@ -217,11 +217,22 @@ def main():
                 'details': details
             }}
         else:
-            result = {{
-                'type': 'transformation',
-                'changes': changes,
-                'preview': preview
-            }}
+            # Support both legacy and unified formats
+            # Try unified_changes first, fall back to changes
+            if 'unified_changes' in locals():
+                result = {{
+                    'type': 'transformation',
+                    'unified_changes': unified_changes,
+                    'preview': preview
+                }}
+            elif 'changes' in locals():
+                result = {{
+                    'type': 'transformation',
+                    'changes': changes,
+                    'preview': preview
+                }}
+            else:
+                raise NameError("Transformation must define either 'unified_changes' or 'changes'")
         _safe_print(result)
     except Exception as e:
         _safe_print({{
