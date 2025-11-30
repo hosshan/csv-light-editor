@@ -41,6 +41,8 @@ function App() {
   const [shouldCreateNewAfterSave, setShouldCreateNewAfterSave] =
     useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [isSidebarResizing, setIsSidebarResizing] = useState(false);
 
   const handleFileOpen = useCallback(
     async (filePath: string) => {
@@ -334,28 +336,34 @@ function App() {
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Sidebar */}
-        <Sidebar isOpen={isSidebarOpen} />
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onWidthChange={setSidebarWidth}
+          onResizingChange={setIsSidebarResizing}
+        />
 
         {/* Sidebar Toggle Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`absolute top-1/2 -translate-y-1/2 z-20 h-6 w-6 rounded-full border border-border bg-background shadow-sm hover:bg-accent transition-all duration-300 ${
-            isSidebarOpen
-              ? "left-80 -translate-x-1/2"
-              : "left-0 -translate-x-1/2"
-          }`}
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          aria-label={
-            isSidebarOpen ? "サイドバーを折りたたむ" : "サイドバーを展開"
-          }
-        >
-          {isSidebarOpen ? (
-            <ChevronLeft className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
-        </Button>
+        {!isSidebarResizing && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-1/2 -translate-y-1/2 z-20 h-6 w-6 rounded-full border border-border bg-background shadow-sm hover:bg-accent transition-all duration-300"
+            style={{
+              left: isSidebarOpen ? `${sidebarWidth}px` : "0",
+              transform: "translate(-50%, -50%)",
+            }}
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            aria-label={
+              isSidebarOpen ? "サイドバーを折りたたむ" : "サイドバーを展開"
+            }
+          >
+            {isSidebarOpen ? (
+              <ChevronLeft className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </Button>
+        )}
 
         {/* CSV Table */}
         <div className="flex-1 bg-background flex flex-col overflow-hidden">

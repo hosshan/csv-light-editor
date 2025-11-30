@@ -1,4 +1,5 @@
 import { FileText, BarChart3, Filter, Calculator, Bot, Circle } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useCsvStore } from "../../store/csvStore";
 import { formatNumber, formatFileSize } from "../../lib/utils";
 import { ChatPanel } from "../chat/ChatPanel";
@@ -6,14 +7,81 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 export interface SidebarProps {
   isOpen: boolean;
+  onWidthChange?: (width: number) => void;
+  onResizingChange?: (isResizing: boolean) => void;
 }
 
-export function Sidebar({ isOpen }: SidebarProps) {
+const MIN_WIDTH = 280;
+const MAX_WIDTH = 800;
+const DEFAULT_WIDTH = 320;
+
+export function Sidebar({ isOpen, onWidthChange, onResizingChange }: SidebarProps) {
   const { data, filters, sorts, currentFilePath, hasUnsavedChanges } = useCsvStore();
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Notify parent of width changes
+  useEffect(() => {
+    if (isOpen) {
+      onWidthChange?.(width);
+    }
+  }, [width, isOpen, onWidthChange]);
+
+  // Notify parent of resizing state changes
+  useEffect(() => {
+    onResizingChange?.(isResizing);
+  }, [isResizing, onResizingChange]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      const newWidth = e.clientX;
+      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+        setWidth(newWidth);
+      }
+    },
+    [isResizing]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  // Add global mouse event listeners during resize
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      // Prevent text selection during resize
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "col-resize";
+    } else {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+  }, [isResizing, handleMouseMove, handleMouseUp]);
 
   return (
     <div
-      className={`bg-muted/50 border-r border-border flex flex-col h-full transition-all duration-300 overflow-hidden ${isOpen ? "w-80" : "w-0"}`}
+      ref={sidebarRef}
+      style={{ width: isOpen ? `${width}px` : "0" }}
+      className={`bg-muted/50 border-r border-border flex flex-col h-full overflow-hidden relative ${isOpen ? "" : "w-0"}`}
     >
       {/* Sidebar Content */}
       <div className={`flex-1 flex flex-col overflow-hidden ${isOpen ? "" : "hidden"}`}>
@@ -60,6 +128,17 @@ export function Sidebar({ isOpen }: SidebarProps) {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Resize Handle */}
+      {isOpen && (
+        <div
+          onMouseDown={handleMouseDown}
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/50 transition-colors group"
+          style={{ touchAction: "none" }}
+        >
+          <div className="absolute top-0 right-0 w-1 h-full group-hover:bg-primary/50" />
+        </div>
+      )}
     </div>
   );
 }
