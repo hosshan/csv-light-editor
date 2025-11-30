@@ -329,7 +329,7 @@ Your task is to generate Python code that processes CSV data according to user r
 
 CSV Context:{}{}{}
 
-IMPORTANT: Pay close attention to the column information above, especially datetime formats. 
+IMPORTANT: Pay close attention to the column information above, especially datetime formats.
 When parsing datetime values, use the EXACT format specified in the column information.
 For example, if a column shows format="%Y-%m-%d %H:%M", use datetime.strptime(value, "%Y-%m-%d %H:%M") NOT "%Y-%m-%d %H:%M:%S".
 
@@ -344,13 +344,21 @@ Requirements:
    - headers: List[str] - column headers
    - rows: List[List[str]] - data rows
 
-5. For ANALYSIS operations:
+5. For ANALYSIS operations (read-only, no data modification):
+   - Examples: "show statistics", "count duplicates", "analyze data"
    - Calculate statistics, summaries, or insights
+   - DO NOT modify the data
    - Return results as: summary (str), details (dict)
+   - You MUST define variables: summary, details
 
-6. For TRANSFORMATION operations:
-   - Modify CSV data
-   - Return results as: changes (List[{{"row": int, "col": int, "old_value": str, "new_value": str}}]), preview (List[{{"row": int, "col": int, "column_name": str, "old_value": str, "new_value": str}}])
+6. For TRANSFORMATION operations (modify data):
+   - Examples: "convert to integers", "remove duplicates", "change format", "make uppercase"
+   - Modify the CSV data (rows)
+   - Track all changes made
+   - Return results as: changes (List[{{"row_index": int, "column_index": int, "old_value": str, "new_value": str}}]),
+     preview (List[{{"row_index": int, "column_index": int, "column_name": str, "old_value": str, "new_value": str}}])
+   - You MUST define variables: changes, preview
+   - IMPORTANT: Use "row_index" and "column_index" (NOT "row" and "col")
 
 7. Output format:
    - Analysis: {{"summary": "...", "details": {{...}}}}
@@ -359,6 +367,10 @@ Requirements:
 8. Use only standard library: json, csv, typing, statistics, datetime, re, etc.
 
 9. Progress updates: Print progress as JSON: {{"type": "progress", "processed": int, "total": int, "step": str}}
+
+CRITICAL: Determine if the user wants to:
+- READ/VIEW/ANALYZE data → Generate ANALYSIS code (define summary, details)
+- MODIFY/CHANGE/UPDATE data → Generate TRANSFORMATION code (define changes, preview)
 
 Generate ONLY the Python code, no explanations, no markdown formatting."#,
             sample_rows, selected_range_info, column_info

@@ -105,23 +105,46 @@ impl ScriptGenerator {
 
     pub fn detect_script_type(prompt: &str) -> ScriptType {
         let prompt_lower = prompt.to_lowercase();
-        
+
         // Keywords that indicate transformation (file modification)
         let transformation_keywords = [
-            "変更", "変換", "修正", "更新", "置換", "追加", "削除",
+            // Japanese keywords
+            "変更", "変換", "修正", "更新", "置換", "追加", "削除", "編集",
+            "整数", "小数", "丸め", "切り捨て", "切り上げ",
+            "フォーマット", "書式", "統一", "正規化",
+            "結合", "分割", "抽出", "移動", "並び替え",
+            "大文字", "小文字", "トリム", "空白", "埋め",
+            "除く", "消す", "なくす", "取り除く",
+            "にして", // "整数にして", "大文字にして" などの表現
+
+            // English keywords
             "change", "transform", "modify", "update", "replace", "add", "remove", "delete",
-            "convert", "format", "edit", "fix", "correct",
+            "convert", "format", "edit", "fix", "correct", "set",
+            "integer", "round", "floor", "ceil", "truncate",
+            "normalize", "standardize", "unify",
+            "merge", "split", "extract", "move", "reorder",
+            "uppercase", "lowercase", "trim", "pad", "fill",
+            "capitalize", "strip", "eliminate",
+
+            // Imperative verbs indicating data modification
+            "make", "turn", "create", "apply",
         ];
 
         // Keywords that indicate analysis (read-only)
         let analysis_keywords = [
-            "分析", "計算", "集計", "統計", "確認", "表示", "検索",
+            "分析", "計算", "集計", "統計", "確認", "表示", "検索", "調べ",
             "analyze", "calculate", "compute", "statistics", "summary", "show", "display",
             "find", "search", "count", "average", "mean", "median", "sum",
+            "list", "view", "check", "inspect", "examine",
         ];
 
-        // Check for transformation keywords
+        // Check for transformation keywords first (higher priority)
         if transformation_keywords.iter().any(|keyword| prompt_lower.contains(keyword)) {
+            // Double-check: if it contains "してください" or "して" (Japanese request form)
+            // it's very likely a transformation request
+            if prompt_lower.contains("してください") || prompt_lower.contains("して") {
+                return ScriptType::Transformation;
+            }
             return ScriptType::Transformation;
         }
 
