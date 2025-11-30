@@ -7,8 +7,10 @@ mod state;
 mod utils;
 mod settings;
 mod ai;
+mod ai_script;
+mod chat;
 
-use state::AppStateInner;
+use state::{AppStateInner, ScriptExecutorState};
 use tokio::sync::Mutex;
 use settings::SettingsManager;
 use commands::settings::SettingsState;
@@ -37,10 +39,12 @@ fn main() {
 
     let app_state = Mutex::new(AppStateInner::new());
     let settings_state = SettingsState(Mutex::new(SettingsManager::new()));
+    let script_executor_state = ScriptExecutorState::new();
 
     tauri::Builder::default()
         .manage(app_state)
         .manage(settings_state)
+        .manage(script_executor_state)
         .setup(|app| {
             // Handle file open from command line arguments (macOS - app not running)
             let args: Vec<String> = std::env::args().collect();
@@ -118,6 +122,13 @@ fn main() {
             commands::ai::ai_detect_intent,
             commands::ai::ai_execute,
             commands::ai::ai_apply_changes,
+            commands::ai::generate_script,
+            commands::ai::fix_script,
+            commands::ai::execute_script,
+            commands::ai::get_script_progress,
+            commands::ai::cancel_script_execution,
+            commands::ai::save_chat_history,
+            commands::ai::load_chat_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -6,7 +6,7 @@ mod intent;
 mod analyzer;
 mod transformer;
 mod config;
-mod llm_client;
+pub mod llm_client;
 
 pub use intent::{Intent, IntentType, TargetScope, AnalysisType, TransformOperation};
 pub use analyzer::DataAnalyzer;

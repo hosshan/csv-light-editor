@@ -1,6 +1,13 @@
 use crate::ai::{AiAssistant, DataChange};
+use crate::ai_script::{Script, ExecutionContext, ResultPayload, ScriptType, ColumnInfo};
+use crate::ai_script::generator::ScriptGenerator;
+use crate::state::{ScriptExecutorState, AppState};
+use crate::chat::ChatHistory;
+use crate::csv_engine::data_types::{DataTypeDetector, DataType};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use tauri::{State, Window};
+use std::path::PathBuf;
 
 /// Request to detect user intent from a prompt
 #[derive(Debug, Deserialize)]
@@ -10,6 +17,7 @@ pub struct DetectIntentRequest {
 
 /// Response with detected intent
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DetectIntentResponse {
     pub intent_type: String,
     pub target_scope: String,
@@ -28,7 +36,7 @@ pub struct ExecuteAiRequest {
 
 /// Response with AI execution results
 #[derive(Debug, Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum ExecuteAiResponse {
     Analysis {
         summary: String,
@@ -45,6 +53,7 @@ pub enum ExecuteAiResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChangePreview {
     pub row_index: usize,
     pub column_index: usize,
@@ -231,5 +240,410 @@ fn generate_intent_description(intent: &crate::ai::Intent) -> String {
 
             format!("{} {}", operation_desc, scope_desc)
         }
+    }
+}
+
+// ============================================================================
+// New AI Chat Commands (Script Generation & Execution)
+// ============================================================================
+
+/// Request to generate a script from user prompt
+#[derive(Debug, Deserialize)]
+pub struct GenerateScriptRequest {
+    pub prompt: String,
+    pub csv_context: ExecutionContext,
+}
+
+/// Response with generated script
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateScriptResponse {
+    pub script: Script,
+    pub script_type: String, // "analysis" or "transformation"
+    pub requires_approval: bool,
+}
+
+/// Analyze CSV data to extract column information (types, formats, samples)
+fn analyze_csv_columns(
+    headers: &[String],
+    sample_rows: &[Vec<String>],
+) -> Vec<ColumnInfo> {
+    let detector = DataTypeDetector::new();
+    let mut column_info = Vec::new();
+
+    for (index, header) in headers.iter().enumerate() {
+        // Get column values from sample rows
+        let column_values: Vec<String> = sample_rows
+            .iter()
+            .filter_map(|row| row.get(index))
+            .filter(|v| !v.is_empty())
+            .take(5) // First 5 non-empty values
+            .cloned()
+            .collect();
+
+        if column_values.is_empty() {
+            column_info.push(ColumnInfo {
+                column_index: index,
+                column_name: header.clone(),
+                detected_type: "text".to_string(),
+                format: None,
+                sample_values: vec![],
+            });
+            continue;
+        }
+
+        // Detect column type
+        let detected_type = detector.detect_column_type(&column_values);
+        let type_str = match detected_type {
+            DataType::Integer => "integer",
+            DataType::Float => "float",
+            DataType::Boolean => "boolean",
+            DataType::Date => "date",
+            DataType::DateTime => "datetime",
+            DataType::Email => "email",
+            DataType::Url => "url",
+            DataType::Json => "json",
+            DataType::Text => "text",
+        };
+
+        // Detect format for datetime columns
+        let format = if matches!(detected_type, DataType::DateTime) {
+            detector.detect_column_datetime_format(&column_values)
+        } else {
+            None
+        };
+
+        column_info.push(ColumnInfo {
+            column_index: index,
+            column_name: header.clone(),
+            detected_type: type_str.to_string(),
+            format,
+            sample_values: column_values,
+        });
+    }
+
+    column_info
+}
+
+/// Generate a Python script from user prompt
+#[tauri::command]
+pub async fn generate_script(
+    prompt: String,
+    csv_context: ExecutionContext,
+    sample_rows: Option<Vec<Vec<String>>>, // First 5 rows for analysis
+) -> Result<GenerateScriptResponse, String> {
+    // Analyze column information if sample rows are provided
+    let mut context_with_info = csv_context.clone();
+    if let Some(rows) = sample_rows {
+        let column_info = analyze_csv_columns(&csv_context.headers, &rows);
+        context_with_info.column_info = Some(column_info);
+        log::info!("[COMMAND] Analyzed {} columns with sample data", context_with_info.column_info.as_ref().unwrap().len());
+    }
+
+    let generator = ScriptGenerator::new();
+    
+    match generator.generate_script(&prompt, &context_with_info).await {
+        Ok(script) => {
+            let script_type_str = match &script.script_type {
+                ScriptType::Analysis => "analysis",
+                ScriptType::Transformation => "transformation",
+            };
+            let requires_approval = matches!(&script.script_type, ScriptType::Transformation);
+            
+            Ok(GenerateScriptResponse {
+                script,
+                script_type: script_type_str.to_string(),
+                requires_approval,
+            })
+        }
+        Err(e) => {
+            let error_str = e.to_string();
+            let error_msg = if error_str.contains("API key") || error_str.contains("authentication") {
+                "API key not configured. Please set your API key in settings.".to_string()
+            } else if error_str.contains("network") || error_str.contains("fetch") {
+                "Network error. Please check your internet connection.".to_string()
+            } else if error_str.contains("timeout") {
+                "Request timed out. Please try again.".to_string()
+            } else if error_str.contains("rate limit") {
+                "Rate limit exceeded. Please wait a moment and try again.".to_string()
+            } else {
+                format!("Failed to generate script: {}", e)
+            };
+            Err(error_msg)
+        }
+    }
+}
+
+/// Fix a script that failed execution
+#[tauri::command]
+pub async fn fix_script(
+    original_prompt: String,
+    original_script: Script,
+    error_message: String,
+    csv_context: ExecutionContext,
+    sample_rows: Option<Vec<Vec<String>>>, // First 5 rows for analysis
+) -> Result<GenerateScriptResponse, String> {
+    // Analyze column information if sample rows are provided
+    let mut context_with_info = csv_context.clone();
+    if let Some(rows) = sample_rows {
+        let column_info = analyze_csv_columns(&csv_context.headers, &rows);
+        context_with_info.column_info = Some(column_info);
+        log::info!("[COMMAND] Analyzed {} columns for script fix", context_with_info.column_info.as_ref().unwrap().len());
+    }
+
+    let generator = ScriptGenerator::new();
+    
+    match generator.fix_script(&original_prompt, &original_script, &error_message, &context_with_info).await {
+        Ok(script) => {
+            let script_type_str = match &script.script_type {
+                ScriptType::Analysis => "analysis",
+                ScriptType::Transformation => "transformation",
+            };
+            let requires_approval = matches!(&script.script_type, ScriptType::Transformation);
+            
+            Ok(GenerateScriptResponse {
+                script,
+                script_type: script_type_str.to_string(),
+                requires_approval,
+            })
+        }
+        Err(e) => {
+            let error_str = e.to_string();
+            let error_msg = if error_str.contains("API key") || error_str.contains("authentication") {
+                "API key not configured. Please set your API key in settings.".to_string()
+            } else if error_str.contains("network") || error_str.contains("fetch") {
+                "Network error. Please check your internet connection.".to_string()
+            } else {
+                format!("Failed to fix script: {}", e)
+            };
+            Err(error_msg)
+        }
+    }
+}
+
+/// Request to execute a script
+#[derive(Debug, Deserialize)]
+pub struct ExecuteScriptRequest {
+    pub script: Script,
+    pub approval: bool,
+    pub csv_data: CsvDataInput,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CsvDataInput {
+    pub headers: Vec<String>,
+    pub rows: Vec<Vec<String>>,
+}
+
+/// Response with execution result
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExecuteScriptResponse {
+    pub execution_id: String,
+    pub result: ResultPayload,
+    pub changes: Option<Vec<crate::ai_script::DataChange>>,
+}
+
+/// Execute a Python script
+#[tauri::command]
+pub async fn execute_script(
+    script: Script,
+    approval: bool,
+    csv_data: CsvDataInput,
+    executor_state: State<'_, ScriptExecutorState>,
+    window: Window,
+) -> Result<ExecuteScriptResponse, String> {
+    // Check if approval is required for transformation scripts
+    let requires_approval = matches!(script.script_type, ScriptType::Transformation);
+    if requires_approval && !approval {
+        return Err("Script execution requires approval".to_string());
+    }
+
+    let executor = executor_state.0.lock().await;
+    
+    log::info!("[COMMAND] execute_script: Starting execution for script type: {:?}", script.script_type);
+    match executor.execute_script(&script, &csv_data.headers, &csv_data.rows, Some(window)).await {
+        Ok(execution_result) => {
+            log::info!("[COMMAND] execute_script: Execution completed, execution_id: {}", execution_result.execution_id);
+            
+            // Log result type for debugging
+            match &execution_result.result {
+                ResultPayload::Analysis { summary, .. } => {
+                    log::info!("[COMMAND] execute_script: Result type: Analysis, summary: {}", summary);
+                }
+                ResultPayload::Transformation { changes, .. } => {
+                    log::info!("[COMMAND] execute_script: Result type: Transformation, changes: {}", changes.len());
+                }
+                ResultPayload::Error { message } => {
+                    log::warn!("[COMMAND] execute_script: Result type: Error, message: {}", message);
+                }
+            }
+            
+            let changes = match &execution_result.result {
+                ResultPayload::Transformation { changes, .. } => Some(changes.clone()),
+                _ => None,
+            };
+
+            Ok(ExecuteScriptResponse {
+                execution_id: execution_result.execution_id.clone(),
+                result: execution_result.result,
+                changes,
+            })
+        }
+                Err(e) => {
+                    log::error!("[COMMAND] execute_script: Execution failed: {}", e);
+                    let error_str = e.to_string();
+                    let error_msg = if error_str.contains("security") || error_str.contains("validation") {
+                        "The script contains potentially unsafe operations and was blocked for security reasons.".to_string()
+                    } else if error_str.contains("python") || error_str.contains("syntax") {
+                        "Python syntax error. The generated script may need to be reviewed.".to_string()
+                    } else if error_str.contains("timeout") || error_str.contains("cancelled") {
+                        "Execution was cancelled or timed out.".to_string()
+                    } else if error_str.contains("permission") || error_str.contains("access") {
+                        "Permission denied. The script may be trying to access restricted resources.".to_string()
+                    } else {
+                        format!("Script execution failed: {}", e)
+                    };
+                    Err(error_msg)
+                }
+    }
+}
+
+/// Request to get script execution progress
+#[derive(Debug, Deserialize)]
+pub struct GetScriptProgressRequest {
+    pub execution_id: String,
+}
+
+/// Response with progress information
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetScriptProgressResponse {
+    pub progress: crate::ai_script::ExecutionProgress,
+    pub is_completed: bool,
+}
+
+/// Get script execution progress
+#[tauri::command]
+pub async fn get_script_progress(
+    execution_id: String,
+    executor_state: State<'_, ScriptExecutorState>,
+) -> Result<GetScriptProgressResponse, String> {
+    let executor = executor_state.0.lock().await;
+    
+    match executor.get_progress(&execution_id).await {
+        Some(progress) => {
+            // Check if execution is still active
+            // If progress is at 100%, it's likely completed
+            let is_completed = progress.progress_percentage >= 100.0;
+            Ok(GetScriptProgressResponse {
+                progress,
+                is_completed,
+            })
+        }
+        None => Err("Execution not found".to_string()),
+    }
+}
+
+/// Request to cancel script execution
+#[derive(Debug, Deserialize)]
+pub struct CancelScriptExecutionRequest {
+    pub execution_id: String,
+}
+
+/// Response with cancellation result
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CancelScriptExecutionResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+/// Cancel script execution
+#[tauri::command]
+pub async fn cancel_script_execution(
+    execution_id: String,
+    executor_state: State<'_, ScriptExecutorState>,
+) -> Result<CancelScriptExecutionResponse, String> {
+    let executor = executor_state.0.lock().await;
+    
+    match executor.cancel_execution(&execution_id).await {
+        Ok(()) => Ok(CancelScriptExecutionResponse {
+            success: true,
+            message: "Execution cancelled".to_string(),
+        }),
+        Err(e) => Ok(CancelScriptExecutionResponse {
+            success: false,
+            message: format!("Failed to cancel execution: {}", e),
+        }),
+    }
+}
+
+/// Request to save chat history
+#[derive(Debug, Deserialize)]
+pub struct SaveChatHistoryRequest {
+    pub csv_path: String,
+    pub history: ChatHistory,
+}
+
+/// Response with save result
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveChatHistoryResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+/// Save chat history to metadata
+#[tauri::command]
+pub async fn save_chat_history(
+    csv_path: String,
+    history: ChatHistory,
+    app_state: State<'_, AppState>,
+) -> Result<SaveChatHistoryResponse, String> {
+    let path = PathBuf::from(&csv_path);
+    
+    let mut state = app_state.lock().await;
+    
+    match state.metadata_manager.save_chat_history(&path, history) {
+        Ok(()) => Ok(SaveChatHistoryResponse {
+            success: true,
+            message: "Chat history saved successfully".to_string(),
+        }),
+        Err(e) => Ok(SaveChatHistoryResponse {
+            success: false,
+            message: format!("Failed to save chat history: {}", e),
+        }),
+    }
+}
+
+/// Request to load chat history
+#[derive(Debug, Deserialize)]
+pub struct LoadChatHistoryRequest {
+    pub csv_path: String,
+}
+
+/// Response with chat history
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoadChatHistoryResponse {
+    pub history: Option<ChatHistory>,
+}
+
+/// Load chat history from metadata
+#[tauri::command]
+pub async fn load_chat_history(
+    csv_path: String,
+    app_state: State<'_, AppState>,
+) -> Result<LoadChatHistoryResponse, String> {
+    let path = PathBuf::from(&csv_path);
+    
+    let mut state = app_state.lock().await;
+    
+    match state.metadata_manager.load_chat_history(&path) {
+        Ok(history) => Ok(LoadChatHistoryResponse {
+            history,
+        }),
+        Err(e) => Err(format!("Failed to load chat history: {}", e)),
     }
 }

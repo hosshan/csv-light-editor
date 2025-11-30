@@ -30,8 +30,8 @@ type ExportFormat = 'csv' | 'tsv' | 'markdown' | 'jsonarray' | 'jsonobject';
 
 interface ExportOptions {
   format: ExportFormat;
-  include_headers: boolean;
-  pretty_print: boolean;
+  includeHeaders: boolean;
+  prettyPrint: boolean;
 }
 
 export const ExportDialog: React.FC<ExportDialogProps> = ({
@@ -63,8 +63,8 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
     try {
       const options: ExportOptions = {
         format,
-        include_headers: includeHeaders,
-        pretty_print: prettyPrint,
+        includeHeaders: includeHeaders,
+        prettyPrint: prettyPrint,
       };
 
       const previewText = await invoke<string>('generate_export_preview', {
@@ -120,8 +120,8 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
       // Export data
       const options: ExportOptions = {
         format,
-        include_headers: includeHeaders,
-        pretty_print: prettyPrint,
+        includeHeaders: includeHeaders,
+        prettyPrint: prettyPrint,
       };
 
       await invoke('export_data', {
@@ -155,8 +155,8 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
     try {
       const options: ExportOptions = {
         format,
-        include_headers: includeHeaders,
-        pretty_print: prettyPrint,
+        includeHeaders: includeHeaders,
+        prettyPrint: prettyPrint,
       };
 
       await invoke('copy_to_clipboard', {

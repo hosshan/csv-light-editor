@@ -89,6 +89,43 @@ cargo fmt           # Format Rust code
 - **Dev Server**: Runs on `http://localhost:1420`
 - **Bundle ID**: `io.hosshan.csv-light-editor`
 
+## Rust Development Guidelines
+
+### Serde Naming Convention (CRITICAL)
+
+**All structs and enums that are serialized to JSON MUST use `#[serde(rename_all = "camelCase")]`**
+
+This is a critical requirement for Tauri applications:
+
+```rust
+// ✅ CORRECT
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserData {
+    pub first_name: String,      // JSON: firstName
+    pub user_id: String,          // JSON: userId
+}
+
+// ❌ WRONG - Missing #[serde(rename_all = "camelCase")]
+#[derive(Debug, Serialize)]
+pub struct UserData {
+    pub first_name: String,       // JSON: first_name (breaks frontend!)
+}
+```
+
+**Why this matters:**
+- Tauri converts command **arguments** from snake_case to camelCase automatically
+- Tauri does **NOT** convert **response** data automatically
+- Frontend expects camelCase everywhere for consistency
+- Missing this attribute causes runtime errors and broken functionality
+
+**Checklist for new structs:**
+- [ ] Does it implement `Serialize` or `Deserialize`?
+- [ ] Will it be sent to/from the frontend?
+- [ ] Have I added `#[serde(rename_all = "camelCase")]`?
+
+See [RUST_STYLE_GUIDE.md](RUST_STYLE_GUIDE.md) for complete details.
+
 ## AI Features Configuration
 
 AI features can be configured via environment variables in `app/src-tauri/.env`.

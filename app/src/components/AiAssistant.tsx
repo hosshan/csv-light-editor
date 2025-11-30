@@ -16,11 +16,11 @@ interface Message {
 }
 
 interface ChangePreview {
-  row_index: number;
-  column_index: number;
-  column_name: string;
-  old_value: string;
-  new_value: string;
+  rowIndex: number;
+  columnIndex: number;
+  columnName: string;
+  oldValue: string;
+  newValue: string;
 }
 
 export function AiAssistant() {
@@ -72,7 +72,7 @@ export function AiAssistant() {
           prompt: userPrompt,
           headers: data.headers,
           rows: data.rows,
-          max_rows: 10000,
+          maxRows: 10000,
         },
       }) as any;
 
@@ -84,7 +84,7 @@ export function AiAssistant() {
           'assistant',
           `${response.summary}. Review the changes below and click "Apply Changes" to confirm.`,
           'transformation',
-          { preview, change_count: response.change_count }
+          { preview, changeCount: response.changeCount ?? response.change_count }
         );
         setAiPendingChanges(response);
       } else if (response.type === 'Error') {
@@ -110,7 +110,7 @@ export function AiAssistant() {
           prompt: aiMessages[aiMessages.length - 2].content, // Get the user's last prompt
           headers: data.headers,
           rows: data.rows,
-          max_rows: 10000,
+          maxRows: 10000,
         },
       }) as any;
 
@@ -187,15 +187,15 @@ export function AiAssistant() {
                       className="bg-background/50 p-2 rounded text-xs"
                     >
                       <div className="font-mono text-[10px] text-muted-foreground mb-1">
-                        Row {change.row_index + 1}, {change.column_name}
+                        Row {change.rowIndex + 1}, {change.columnName}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="line-through text-destructive flex-1 truncate">
-                          {change.old_value || '(empty)'}
+                          {change.oldValue || '(empty)'}
                         </span>
                         <span>→</span>
                         <span className="text-green-600 flex-1 truncate">
-                          {change.new_value}
+                          {change.newValue}
                         </span>
                       </div>
                     </div>

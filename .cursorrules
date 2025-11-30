@@ -95,6 +95,39 @@ cargo fmt           # Rustコードのフォーマット
 - エラーハンドリングには`Result<T, E>`を使用
 - ドキュメンテーションコメント（`///`）を適切に使用
 
+#### ⚠️ 重要: Serde命名規則（必須）
+
+**JSONにシリアライズされるすべての構造体とenumには `#[serde(rename_all = "camelCase")]` を使用すること**
+
+```rust
+// ✅ 正しい
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserData {
+    pub first_name: String,      // JSON: firstName
+    pub user_id: String,          // JSON: userId
+}
+
+// ❌ 間違い - #[serde(rename_all = "camelCase")]がない
+#[derive(Debug, Serialize)]
+pub struct UserData {
+    pub first_name: String,       // JSON: first_name (フロントエンドで動作しない!)
+}
+```
+
+**理由:**
+- Tauriはコマンド**引数**を自動的にcamelCaseに変換する
+- Tauriは**レスポンス**データを自動変換**しない**
+- フロントエンドは一貫性のためすべてcamelCaseを期待する
+- この属性がないとランタイムエラーや機能不全が発生する
+
+**新規構造体のチェックリスト:**
+- [ ] `Serialize`または`Deserialize`を実装しているか？
+- [ ] フロントエンドとの送受信に使用されるか？
+- [ ] `#[serde(rename_all = "camelCase")]`を追加したか？
+
+詳細は [RUST_STYLE_GUIDE.md](RUST_STYLE_GUIDE.md) を参照
+
 ### ファイル命名
 - Reactコンポーネント: `ComponentName.tsx`
 - Rustモジュール: `module_name.rs`

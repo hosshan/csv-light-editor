@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 
 use super::{Intent, IntentType, TargetScope, AnalysisType, TransformOperation};
+use crate::ai_script::ExecutionContext;
 
 /// LLM Provider types
 #[derive(Debug, Clone)]
@@ -17,6 +18,13 @@ pub enum LlmProvider {
 #[async_trait]
 pub trait LlmClient: Send + Sync {
     async fn detect_intent(&self, prompt: &str) -> Result<Intent>;
+    
+    /// Generate a Python script from user prompt and CSV context
+    async fn generate_script(
+        &self,
+        prompt: &str,
+        csv_context: &ExecutionContext,
+    ) -> Result<String>;
 }
 
 /// OpenAI API client
@@ -187,6 +195,175 @@ impl LlmClient for OpenAiClient {
 
         parse_llm_response(&content)
     }
+
+    async fn generate_script(
+        &self,
+        prompt: &str,
+        csv_context: &ExecutionContext,
+    ) -> Result<String> {
+        #[derive(Serialize)]
+        struct OpenAiRequest {
+            model: String,
+            messages: Vec<OpenAiMessage>,
+            temperature: f32,
+        }
+
+        #[derive(Serialize)]
+        struct OpenAiMessage {
+            role: String,
+            content: String,
+        }
+
+        #[derive(Deserialize)]
+        struct OpenAiResponse {
+            choices: Vec<OpenAiChoice>,
+        }
+
+        #[derive(Deserialize)]
+        struct OpenAiChoice {
+            message: OpenAiResponseMessage,
+        }
+
+        #[derive(Deserialize)]
+        struct OpenAiResponseMessage {
+            content: String,
+        }
+
+        // Create system prompt for script generation
+        let system_prompt = Self::create_script_generation_prompt(csv_context);
+
+        let request = OpenAiRequest {
+            model: self.model.clone(),
+            messages: vec![
+                OpenAiMessage {
+                    role: "system".to_string(),
+                    content: system_prompt,
+                },
+                OpenAiMessage {
+                    role: "user".to_string(),
+                    content: prompt.to_string(),
+                },
+            ],
+            temperature: 0.2, // Lower temperature for more deterministic code generation
+        };
+
+        let client = reqwest::Client::new();
+        let response = client
+            .post(&self.endpoint)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| anyhow!("Failed to call OpenAI API: {}", e))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(anyhow!("OpenAI API error {}: {}", status, error_text));
+        }
+
+        let openai_response: OpenAiResponse = response
+            .json()
+            .await
+            .map_err(|e| anyhow!("Failed to parse OpenAI response: {}", e))?;
+
+        let content = openai_response
+            .choices
+            .first()
+            .ok_or_else(|| anyhow!("No response from OpenAI"))?
+            .message
+            .content
+            .clone();
+
+        log::debug!("OpenAI script generation response: {}", content);
+
+        // Extract Python code from response (may include markdown code blocks)
+        extract_python_code(&content)
+    }
+}
+
+impl OpenAiClient {
+    fn create_script_generation_prompt(context: &ExecutionContext) -> String {
+        let sample_rows = if context.row_count > 0 && !context.headers.is_empty() {
+            format!(
+                "\nSample data:\nHeaders: {}\nRow count: {}",
+                context.headers.join(", "),
+                context.row_count
+            )
+        } else {
+            String::new()
+        };
+
+        let selected_range_info = if let Some(range) = &context.selected_range {
+            format!(
+                "\nSelected range: rows {}-{}, columns {}-{}",
+                range.start_row, range.end_row, range.start_column, range.end_column
+            )
+        } else {
+            String::new()
+        };
+
+        // Add column information if available
+        let column_info = if let Some(ref columns) = context.column_info {
+            let mut info_lines = vec!["\nColumn Information:".to_string()];
+            for col in columns {
+                let mut col_info = format!("  - {} (index {}): type={}", col.column_name, col.column_index, col.detected_type);
+                if let Some(ref format) = col.format {
+                    col_info.push_str(&format!(", format=\"{}\"", format));
+                }
+                if !col.sample_values.is_empty() {
+                    col_info.push_str(&format!(", samples=[{}]", col.sample_values.join(", ")));
+                }
+                info_lines.push(col_info);
+            }
+            info_lines.join("\n")
+        } else {
+            String::new()
+        };
+
+        format!(
+            r#"You are a Python code generator for CSV data manipulation in CSV Light Editor.
+
+Your task is to generate Python code that processes CSV data according to user requests.
+
+CSV Context:{}{}{}
+
+IMPORTANT: Pay close attention to the column information above, especially datetime formats. 
+When parsing datetime values, use the EXACT format specified in the column information.
+For example, if a column shows format="%Y-%m-%d %H:%M", use datetime.strptime(value, "%Y-%m-%d %H:%M") NOT "%Y-%m-%d %H:%M:%S".
+
+NOTE: The template already imports "from datetime import datetime", so you can use datetime.strptime() directly.
+Do NOT use "import datetime" or "datetime.datetime.strptime" - just use "datetime.strptime()".
+
+Requirements:
+1. Generate ONLY the Python code for the operation (the code that goes in the {{generated_code}} section)
+2. Do NOT include the template structure (imports, input/output handling)
+3. Do NOT use: os, subprocess, sys (except stdin/stdout), file operations, network operations
+4. The code will receive CSV data as:
+   - headers: List[str] - column headers
+   - rows: List[List[str]] - data rows
+
+5. For ANALYSIS operations:
+   - Calculate statistics, summaries, or insights
+   - Return results as: summary (str), details (dict)
+
+6. For TRANSFORMATION operations:
+   - Modify CSV data
+   - Return results as: changes (List[{{"row": int, "col": int, "old_value": str, "new_value": str}}]), preview (List[{{"row": int, "col": int, "column_name": str, "old_value": str, "new_value": str}}])
+
+7. Output format:
+   - Analysis: {{"summary": "...", "details": {{...}}}}
+   - Transformation: {{"changes": [...], "preview": [...]}}
+
+8. Use only standard library: json, csv, typing, statistics, datetime, re, etc.
+
+9. Progress updates: Print progress as JSON: {{"type": "progress", "processed": int, "total": int, "step": str}}
+
+Generate ONLY the Python code, no explanations, no markdown formatting."#,
+            sample_rows, selected_range_info, column_info
+        )
+    }
 }
 
 /// Gemini API client
@@ -316,6 +493,126 @@ impl LlmClient for GeminiClient {
 
         parse_llm_response(&content)
     }
+
+    async fn generate_script(
+        &self,
+        prompt: &str,
+        csv_context: &ExecutionContext,
+    ) -> Result<String> {
+        #[derive(Serialize)]
+        struct GeminiRequest {
+            contents: Vec<GeminiContent>,
+            generation_config: GeminiGenerationConfig,
+        }
+
+        #[derive(Serialize)]
+        struct GeminiContent {
+            parts: Vec<GeminiPart>,
+        }
+
+        #[derive(Serialize)]
+        struct GeminiPart {
+            text: String,
+        }
+
+        #[derive(Serialize)]
+        struct GeminiGenerationConfig {
+            temperature: f32,
+        }
+
+        #[derive(Deserialize)]
+        struct GeminiResponse {
+            candidates: Vec<GeminiCandidate>,
+        }
+
+        #[derive(Deserialize)]
+        struct GeminiCandidate {
+            content: GeminiResponseContent,
+        }
+
+        #[derive(Deserialize)]
+        struct GeminiResponseContent {
+            parts: Vec<GeminiResponsePart>,
+        }
+
+        #[derive(Deserialize)]
+        struct GeminiResponsePart {
+            text: String,
+        }
+
+        // Create system prompt for script generation
+        let system_prompt = OpenAiClient::create_script_generation_prompt(csv_context);
+        let full_prompt = format!("{}\n\nUser request: {}", system_prompt, prompt);
+
+        let request = GeminiRequest {
+            contents: vec![GeminiContent {
+                parts: vec![GeminiPart {
+                    text: full_prompt,
+                }],
+            }],
+            generation_config: GeminiGenerationConfig {
+                temperature: 0.2, // Lower temperature for more deterministic code generation
+            },
+        };
+
+        let client = reqwest::Client::new();
+        let response = client
+            .post(&self.endpoint)
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| anyhow!("Failed to call Gemini API: {}", e))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(anyhow!("Gemini API error {}: {}", status, error_text));
+        }
+
+        let gemini_response: GeminiResponse = response
+            .json()
+            .await
+            .map_err(|e| anyhow!("Failed to parse Gemini response: {}", e))?;
+
+        let content = gemini_response
+            .candidates
+            .first()
+            .ok_or_else(|| anyhow!("No response from Gemini"))?
+            .content
+            .parts
+            .first()
+            .ok_or_else(|| anyhow!("No content in Gemini response"))?
+            .text
+            .clone();
+
+        log::debug!("Gemini script generation response: {}", content);
+
+        // Extract Python code from response
+        extract_python_code(&content)
+    }
+}
+
+/// Extract Python code from LLM response (may include markdown code blocks)
+fn extract_python_code(response: &str) -> Result<String> {
+    // Remove markdown code blocks if present
+    let code = if response.contains("```python") {
+        let start = response.find("```python").unwrap_or(0) + 9;
+        let end = response.rfind("```").unwrap_or(response.len());
+        response[start..end].trim().to_string()
+    } else if response.contains("```") {
+        let start = response.find("```").unwrap_or(0) + 3;
+        let end = response.rfind("```").unwrap_or(response.len());
+        response[start..end].trim().to_string()
+    } else {
+        response.trim().to_string()
+    };
+
+    if code.is_empty() {
+        return Err(anyhow!("No Python code found in LLM response"));
+    }
+
+    Ok(code)
 }
 
 /// Parse LLM JSON response into Intent

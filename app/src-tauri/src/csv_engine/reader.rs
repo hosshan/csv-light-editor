@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use crate::metadata::CsvMetadata;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct CsvData {
     pub headers: Vec<String>,
     pub rows: Vec<Vec<String>>,
