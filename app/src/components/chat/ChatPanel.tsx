@@ -11,7 +11,7 @@ import { ProgressIndicator } from "./ProgressIndicator";
 import { useChatStore } from "../../store/chatStore";
 import { useCsvStore } from "../../store/csvStore";
 import type { ChatMessage, ChatHistory } from "../../types/chat";
-import type { Script, ExecutionResult } from "../../types/script";
+import type { Script, ExecutionResult, DataChange } from "../../types/script";
 
 interface ChatPanelProps {
   onClose?: () => void;
@@ -361,6 +361,8 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       console.log("[ChatPanel] result type:", executeResponse?.result?.type);
       console.log("[ChatPanel] result:", executeResponse?.result);
       console.log("[ChatPanel] result type check:", executeResponse?.result?.type === "error");
+      console.log("[ChatPanel] changes:", executeResponse?.changes);
+      console.log("[ChatPanel] changes length:", executeResponse?.changes?.length);
 
       // Check if result is an error FIRST, before updating state
       if (!executeResponse) {
@@ -559,6 +561,62 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       // Type guard for analysis result
       const isAnalysis =
         successResult && "type" in successResult && successResult.type === "analysis";
+      const isTransformation =
+        successResult && "type" in successResult && successResult.type === "transformation";
+
+      // Apply transformation changes to CSV data if this is a transformation
+      console.log("[ChatPanel] Checking transformation conditions:");
+      console.log("  - isTransformation:", isTransformation);
+      console.log("  - executeResponse.changes exists:", !!executeResponse.changes);
+      console.log("  - executeResponse.changes length:", executeResponse.changes?.length);
+
+      if (isTransformation && executeResponse.changes && executeResponse.changes.length > 0) {
+        console.log("[ChatPanel] Applying transformation changes:", executeResponse.changes.length);
+
+        // Get current data
+        const currentData = useCsvStore.getState().data;
+        console.log("[ChatPanel] Current data exists:", !!currentData);
+        console.log("[ChatPanel] Current data rows:", currentData?.rows.length);
+
+        if (currentData) {
+          // Create a deep copy of the data
+          const newData = {
+            ...currentData,
+            rows: currentData.rows.map(row => [...row])
+          };
+
+          console.log("[ChatPanel] Sample changes to apply:", executeResponse.changes.slice(0, 3));
+
+          // Apply each change
+          let appliedCount = 0;
+          executeResponse.changes.forEach((change: DataChange) => {
+            const { rowIndex, columnIndex, newValue } = change;
+
+            if (newData.rows[rowIndex] && columnIndex < newData.rows[rowIndex].length) {
+              const oldValue = newData.rows[rowIndex][columnIndex];
+              newData.rows[rowIndex][columnIndex] = newValue;
+              appliedCount++;
+
+              if (appliedCount <= 3) {
+                console.log(`[ChatPanel] Applied change ${appliedCount}: row=${rowIndex}, col=${columnIndex}, old="${oldValue}", new="${newValue}"`);
+              }
+            } else {
+              console.warn(`[ChatPanel] Invalid change index: row=${rowIndex}, col=${columnIndex}`);
+            }
+          });
+
+          console.log(`[ChatPanel] Applied ${appliedCount} out of ${executeResponse.changes.length} changes`);
+
+          // Update the store with the transformed data
+          console.log("[ChatPanel] Calling replaceAll with new data");
+          useCsvStore.getState().replaceAll(newData, "AI transformation");
+          console.log("[ChatPanel] Transformation changes applied successfully");
+        } else {
+          console.warn("[ChatPanel] No data available to apply transformation");
+        }
+      } else {
+        console.log("[ChatPanel] Skipping transformation application - conditions not met");
+      }
 
       // Handle summary - it might be a string, object, or array
       let content = "Transformation completed successfully!";
@@ -573,6 +631,9 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         } else {
           content = String(summaryValue);
         }
+      } else if (isTransformation && executeResponse.changes) {
+        // For transformations, show the number of changes applied
+        content = `Transformation completed! Applied ${executeResponse.changes.length} change(s) to your data.`;
       }
 
       console.log(

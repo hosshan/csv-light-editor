@@ -484,11 +484,22 @@ pub async fn execute_script(
                 _ => None,
             };
 
-            Ok(ExecuteScriptResponse {
+            let response = ExecuteScriptResponse {
                 execution_id: execution_result.execution_id.clone(),
                 result: execution_result.result,
-                changes,
-            })
+                changes: changes.clone(),
+            };
+
+            // Log the response being sent to frontend
+            log::info!("[COMMAND] execute_script: Response to frontend - execution_id: {}", response.execution_id);
+            log::info!("[COMMAND] execute_script: Response changes count: {:?}", response.changes.as_ref().map(|c| c.len()));
+            if let Some(ref changes_vec) = response.changes {
+                if !changes_vec.is_empty() {
+                    log::info!("[COMMAND] execute_script: Sample changes being sent: {:?}", &changes_vec[..changes_vec.len().min(3)]);
+                }
+            }
+
+            Ok(response)
         }
                 Err(e) => {
                     log::error!("[COMMAND] execute_script: Execution failed: {}", e);
