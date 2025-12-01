@@ -59,7 +59,12 @@ pub enum ResultPayload {
         details: serde_json::Value,
     },
     Transformation {
-        changes: Vec<DataChange>,
+        // Legacy format - backward compatibility
+        #[serde(skip_serializing_if = "Option::is_none")]
+        changes: Option<Vec<DataChange>>,
+        // New unified format
+        #[serde(skip_serializing_if = "Option::is_none")]
+        unified_changes: Option<Vec<Change>>,
         preview: Vec<ChangePreview>,
     },
     Error {
@@ -67,6 +72,7 @@ pub enum ResultPayload {
     },
 }
 
+// Legacy format - kept for backward compatibility
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DataChange {
@@ -78,6 +84,76 @@ pub struct DataChange {
     pub old_value: String,
     #[serde(alias = "new_value")]
     pub new_value: String,
+}
+
+// Unified change structure that supports all types of operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum Change {
+    #[serde(rename = "cell", rename_all = "camelCase")]
+    Cell {
+        #[serde(alias = "row_index")]
+        row_index: usize,
+        #[serde(alias = "column_index")]
+        column_index: usize,
+        #[serde(alias = "old_value")]
+        old_value: String,
+        #[serde(alias = "new_value")]
+        new_value: String,
+    },
+    #[serde(rename = "add_column", rename_all = "camelCase")]
+    AddColumn {
+        #[serde(alias = "column_index")]
+        column_index: usize,
+        #[serde(alias = "column_name")]
+        column_name: String,
+        position: ColumnPosition,
+        #[serde(alias = "default_value")]
+        default_value: Option<String>,
+    },
+    #[serde(rename = "remove_column", rename_all = "camelCase")]
+    RemoveColumn {
+        #[serde(alias = "column_index")]
+        column_index: usize,
+        #[serde(alias = "column_name")]
+        column_name: String,
+    },
+    #[serde(rename = "rename_column", rename_all = "camelCase")]
+    RenameColumn {
+        #[serde(alias = "column_index")]
+        column_index: usize,
+        #[serde(alias = "old_name")]
+        old_name: String,
+        #[serde(alias = "new_name")]
+        new_name: String,
+    },
+    #[serde(rename = "add_row", rename_all = "camelCase")]
+    AddRow {
+        #[serde(alias = "row_index")]
+        row_index: usize,
+        position: RowPosition,
+        #[serde(alias = "row_data")]
+        row_data: Option<Vec<String>>,
+    },
+    #[serde(rename = "remove_row", rename_all = "camelCase")]
+    RemoveRow {
+        #[serde(alias = "row_index")]
+        row_index: usize,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ColumnPosition {
+    Before,
+    After,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RowPosition {
+    Before,
+    After,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -329,7 +329,7 @@ Your task is to generate Python code that processes CSV data according to user r
 
 CSV Context:{}{}{}
 
-IMPORTANT: Pay close attention to the column information above, especially datetime formats. 
+IMPORTANT: Pay close attention to the column information above, especially datetime formats.
 When parsing datetime values, use the EXACT format specified in the column information.
 For example, if a column shows format="%Y-%m-%d %H:%M", use datetime.strptime(value, "%Y-%m-%d %H:%M") NOT "%Y-%m-%d %H:%M:%S".
 
@@ -344,21 +344,88 @@ Requirements:
    - headers: List[str] - column headers
    - rows: List[List[str]] - data rows
 
-5. For ANALYSIS operations:
+5. For ANALYSIS operations (read-only, no data modification):
+   - Examples: "show statistics", "count duplicates", "analyze data"
    - Calculate statistics, summaries, or insights
+   - DO NOT modify the data
    - Return results as: summary (str), details (dict)
+   - You MUST define variables: summary, details
 
-6. For TRANSFORMATION operations:
-   - Modify CSV data
-   - Return results as: changes (List[{{"row": int, "col": int, "old_value": str, "new_value": str}}]), preview (List[{{"row": int, "col": int, "column_name": str, "old_value": str, "new_value": str}}])
+6. For TRANSFORMATION operations (modify data):
+   - Examples: "convert to integers", "remove duplicates", "change format", "add column", "add row"
+   - Generate a list of changes using the UNIFIED CHANGE FORMAT
+   - DO NOT modify the headers or rows arrays directly!
+   - The frontend will apply the changes you specify
+
+   UNIFIED CHANGE FORMAT (USE THIS):
+   unified_changes is a List of change objects. Each change MUST have a "type" field:
+
+   a) Cell value change:
+      {{"type": "cell", "row_index": int, "column_index": int, "old_value": str, "new_value": str}}
+
+   b) Add column:
+      {{"type": "add_column", "column_index": int, "column_name": str, "position": "before"|"after", "default_value": str}}
+
+      IMPORTANT INDEX RULES for add_column:
+      - "column_index" is the REFERENCE column index (BEFORE any changes)
+      - "position: after" means insert AFTER the reference column
+      - "position: before" means insert BEFORE the reference column
+
+      Examples:
+      - Add after column 0: {{"column_index": 0, "position": "after"}} → inserts at index 1
+      - Add before column 1: {{"column_index": 1, "position": "before"}} → inserts at index 1
+      - Add after column 2: {{"column_index": 2, "position": "after"}} → inserts at index 3
+
+   c) Remove column:
+      {{"type": "remove_column", "column_index": int, "column_name": str}}
+
+   d) Rename column:
+      {{"type": "rename_column", "column_index": int, "old_name": str, "new_name": str}}
+
+   e) Add row:
+      {{"type": "add_row", "row_index": int, "position": "before"|"after", "row_data": [str, ...]}}
+
+   f) Remove row:
+      {{"type": "remove_row", "row_index": int}}
+
+   CRITICAL ORDER: When adding columns/rows, put structural changes FIRST, then cell changes:
+   1. Add/remove/rename columns (if any)
+   2. Add/remove rows (if any)
+   3. Modify cell values (if any)
+
+   CRITICAL INDEX RULES for cell changes after structural changes:
+   - When you add a column, ALL subsequent cell changes must use the NEW index
+   - Calculate the new index based on where the column was inserted
+   - Example: If you add column at index 1, the old column 1 becomes index 2
+
+   You MUST define variables: unified_changes, preview
+   - unified_changes: List of change objects (as defined above)
+   - preview: List of preview objects for display (first 10 changes)
+
+   COMPLETE EXAMPLE - Add "Full Name" column after "First Name" (index 0) and populate it:
+   # Original columns: ["First Name" (0), "Last Name" (1), "Age" (2)]
+   # Target: ["First Name" (0), "Full Name" (1), "Last Name" (2), "Age" (3)]
+
+   unified_changes = [
+     # Step 1: Add column AFTER index 0 → new column becomes index 1
+     {{"type": "add_column", "column_index": 0, "column_name": "Full Name", "position": "after", "default_value": ""}},
+
+     # Step 2: Populate the NEW column at index 1 (NOT index 0!)
+     {{"type": "cell", "row_index": 0, "column_index": 1, "old_value": "", "new_value": "John Doe"}},
+     {{"type": "cell", "row_index": 1, "column_index": 1, "old_value": "", "new_value": "Jane Smith"}},
+   ]
 
 7. Output format:
    - Analysis: {{"summary": "...", "details": {{...}}}}
-   - Transformation: {{"changes": [...], "preview": [...]}}
+   - Transformation: {{"unified_changes": [...], "preview": [...]}}
 
 8. Use only standard library: json, csv, typing, statistics, datetime, re, etc.
 
 9. Progress updates: Print progress as JSON: {{"type": "progress", "processed": int, "total": int, "step": str}}
+
+CRITICAL: Determine if the user wants to:
+- READ/VIEW/ANALYZE data → Generate ANALYSIS code (define summary, details)
+- MODIFY/CHANGE/UPDATE data → Generate TRANSFORMATION code (define changes, preview)
 
 Generate ONLY the Python code, no explanations, no markdown formatting."#,
             sample_rows, selected_range_info, column_info

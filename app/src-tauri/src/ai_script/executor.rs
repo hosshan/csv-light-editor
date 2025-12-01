@@ -1,7 +1,7 @@
 // Script execution module
 // Executes Python scripts with progress tracking and result parsing
 
-use crate::ai_script::{Script, ExecutionResult, ExecutionProgress, ResultPayload, DataChange, ChangePreview};
+use crate::ai_script::{Script, ExecutionResult, ExecutionProgress, ResultPayload, DataChange, ChangePreview, Change};
 use crate::ai_script::security::SecurityValidator;
 use anyhow::{Result, anyhow};
 use std::collections::HashMap;
@@ -463,21 +463,35 @@ impl ScriptExecutor {
                 Ok(ResultPayload::Analysis { summary, details })
             }
             Some("transformation") => {
-                let changes: Vec<DataChange> = json.get("changes")
+                // Try to parse unified_changes first (new format)
+                let unified_changes: Option<Vec<Change>> = json.get("unified_changes")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|item| {
+                                // Try to deserialize each change item
+                                serde_json::from_value::<Change>(item.clone()).ok()
+                            })
+                            .collect()
+                    });
+
+                // Parse legacy changes format (backward compatibility)
+                let changes: Option<Vec<DataChange>> = json.get("changes")
                     .and_then(|v| v.as_array())
                     .map(|arr| {
                         arr.iter()
                             .filter_map(|item| {
                                 Some(DataChange {
-                                    row_index: item.get("row")?.as_u64()? as usize,
-                                    column_index: item.get("col")?.as_u64()? as usize,
+                                    row_index: item.get("row_index")
+                                        .or_else(|| item.get("row"))?.as_u64()? as usize,
+                                    column_index: item.get("column_index")
+                                        .or_else(|| item.get("col"))?.as_u64()? as usize,
                                     old_value: item.get("old_value")?.as_str()?.to_string(),
                                     new_value: item.get("new_value")?.as_str()?.to_string(),
                                 })
                             })
                             .collect()
-                    })
-                    .unwrap_or_default();
+                    });
 
                 let preview: Vec<ChangePreview> = json.get("preview")
                     .and_then(|v| v.as_array())
@@ -485,8 +499,10 @@ impl ScriptExecutor {
                         arr.iter()
                             .filter_map(|item| {
                                 Some(ChangePreview {
-                                    row_index: item.get("row")?.as_u64()? as usize,
-                                    column_index: item.get("col")?.as_u64()? as usize,
+                                    row_index: item.get("row_index")
+                                        .or_else(|| item.get("row"))?.as_u64()? as usize,
+                                    column_index: item.get("column_index")
+                                        .or_else(|| item.get("col"))?.as_u64()? as usize,
                                     column_name: item.get("column_name")?.as_str()?.to_string(),
                                     old_value: item.get("old_value")?.as_str()?.to_string(),
                                     new_value: item.get("new_value")?.as_str()?.to_string(),
@@ -496,7 +512,17 @@ impl ScriptExecutor {
                     })
                     .unwrap_or_default();
 
-                Ok(ResultPayload::Transformation { changes, preview })
+                log::info!("[EXECUTOR] Parsed transformation: legacy_changes={:?}, unified_changes={:?}, preview={}",
+                    changes.as_ref().map(|c| c.len()),
+                    unified_changes.as_ref().map(|c| c.len()),
+                    preview.len()
+                );
+
+                Ok(ResultPayload::Transformation {
+                    changes,
+                    unified_changes,
+                    preview
+                })
             }
             Some("error") => {
                 let message = json.get("message")

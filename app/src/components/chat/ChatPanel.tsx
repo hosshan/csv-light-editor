@@ -11,7 +11,7 @@ import { ProgressIndicator } from "./ProgressIndicator";
 import { useChatStore } from "../../store/chatStore";
 import { useCsvStore } from "../../store/csvStore";
 import type { ChatMessage, ChatHistory } from "../../types/chat";
-import type { Script, ExecutionResult } from "../../types/script";
+import type { Script, ExecutionResult, DataChange, Change } from "../../types/script";
 
 interface ChatPanelProps {
   onClose?: () => void;
@@ -361,6 +361,8 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       console.log("[ChatPanel] result type:", executeResponse?.result?.type);
       console.log("[ChatPanel] result:", executeResponse?.result);
       console.log("[ChatPanel] result type check:", executeResponse?.result?.type === "error");
+      console.log("[ChatPanel] changes:", executeResponse?.changes);
+      console.log("[ChatPanel] changes length:", executeResponse?.changes?.length);
 
       // Check if result is an error FIRST, before updating state
       if (!executeResponse) {
@@ -559,6 +561,132 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       // Type guard for analysis result
       const isAnalysis =
         successResult && "type" in successResult && successResult.type === "analysis";
+      const isTransformation =
+        successResult && "type" in successResult && successResult.type === "transformation";
+
+      // Apply transformation changes to CSV data if this is a transformation
+      console.log("[ChatPanel] Checking transformation conditions:");
+      console.log("  - isTransformation:", isTransformation);
+      console.log("  - executeResponse.changes exists:", !!executeResponse.changes);
+      console.log("  - executeResponse.changes length:", executeResponse.changes?.length);
+      console.log("  - executeResponse.unifiedChanges exists:", !!(executeResponse as any).unifiedChanges);
+      console.log("  - executeResponse.unifiedChanges length:", (executeResponse as any).unifiedChanges?.length);
+
+      // Helper function to apply unified changes
+      const applyUnifiedChanges = (currentData: any, changes: Change[]) => {
+        let newData = {
+          ...currentData,
+          headers: [...currentData.headers],
+          rows: currentData.rows.map((row: string[]) => [...row]),
+        };
+
+        let appliedCount = 0;
+        changes.forEach((change: Change) => {
+          switch (change.type) {
+            case 'cell':
+              if (newData.rows[change.rowIndex] && change.columnIndex < newData.rows[change.rowIndex].length) {
+                newData.rows[change.rowIndex][change.columnIndex] = change.newValue;
+                appliedCount++;
+                if (appliedCount <= 3) {
+                  console.log(`[ChatPanel] Applied cell change: row=${change.rowIndex}, col=${change.columnIndex}, "${change.oldValue}" → "${change.newValue}"`);
+                }
+              }
+              break;
+
+            case 'add_column': {
+              const insertIdx = change.position === 'before' ? change.columnIndex : change.columnIndex + 1;
+              newData.headers.splice(insertIdx, 0, change.columnName);
+              newData.rows.forEach((row: string[]) => {
+                row.splice(insertIdx, 0, change.defaultValue || '');
+              });
+              appliedCount++;
+              console.log(`[ChatPanel] Added column "${change.columnName}" at index ${insertIdx}`);
+              break;
+            }
+
+            case 'remove_column':
+              newData.headers.splice(change.columnIndex, 1);
+              newData.rows.forEach((row: string[]) => {
+                row.splice(change.columnIndex, 1);
+              });
+              appliedCount++;
+              console.log(`[ChatPanel] Removed column "${change.columnName}" at index ${change.columnIndex}`);
+              break;
+
+            case 'rename_column':
+              newData.headers[change.columnIndex] = change.newName;
+              appliedCount++;
+              console.log(`[ChatPanel] Renamed column "${change.oldName}" → "${change.newName}"`);
+              break;
+
+            case 'add_row': {
+              const insertIdx = change.position === 'before' ? change.rowIndex : change.rowIndex + 1;
+              const newRow = change.rowData || new Array(newData.headers.length).fill('');
+              newData.rows.splice(insertIdx, 0, newRow);
+              appliedCount++;
+              console.log(`[ChatPanel] Added row at index ${insertIdx}`);
+              break;
+            }
+
+            case 'remove_row':
+              newData.rows.splice(change.rowIndex, 1);
+              appliedCount++;
+              console.log(`[ChatPanel] Removed row at index ${change.rowIndex}`);
+              break;
+
+            default:
+              console.warn(`[ChatPanel] Unknown change type:`, change);
+          }
+        });
+
+        console.log(`[ChatPanel] Applied ${appliedCount} out of ${changes.length} unified changes`);
+        return newData;
+      };
+
+      if (isTransformation) {
+        const currentData = useCsvStore.getState().data;
+        console.log("[ChatPanel] Current data exists:", !!currentData);
+        console.log("[ChatPanel] Current data rows:", currentData?.rows.length);
+
+        if (currentData) {
+          // Check for unified changes first (new format)
+          if ((executeResponse as any).unifiedChanges && (executeResponse as any).unifiedChanges.length > 0) {
+            console.log("[ChatPanel] Applying unified changes:", (executeResponse as any).unifiedChanges.length);
+            const newData = applyUnifiedChanges(currentData, (executeResponse as any).unifiedChanges);
+            useCsvStore.getState().replaceAll(newData, "AI transformation");
+            console.log("[ChatPanel] Unified transformation changes applied successfully");
+          }
+          // Fall back to legacy format
+          else if (executeResponse.changes && executeResponse.changes.length > 0) {
+            console.log("[ChatPanel] Applying legacy transformation changes:", executeResponse.changes.length);
+
+            const newData = {
+              ...currentData,
+              rows: currentData.rows.map(row => [...row])
+            };
+
+            let appliedCount = 0;
+            executeResponse.changes.forEach((change: DataChange) => {
+              const { rowIndex, columnIndex, newValue } = change;
+
+              if (newData.rows[rowIndex] && columnIndex < newData.rows[rowIndex].length) {
+                newData.rows[rowIndex][columnIndex] = newValue;
+                appliedCount++;
+              }
+            });
+
+            console.log(`[ChatPanel] Applied ${appliedCount} out of ${executeResponse.changes.length} changes`);
+            useCsvStore.getState().replaceAll(newData, "AI transformation");
+            console.log("[ChatPanel] Legacy transformation changes applied successfully");
+          } else {
+            console.log("[ChatPanel] No changes to apply");
+          }
+        } else {
+          console.warn("[ChatPanel] No data available to apply transformation");
+        }
+      } else {
+        console.log("[ChatPanel] Skipping transformation application - not a transformation");
+      }
 
       // Handle summary - it might be a string, object, or array
       let content = "Transformation completed successfully!";
@@ -573,6 +701,10 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         } else {
           content = String(summaryValue);
         }
+      } else if (isTransformation) {
+        // For transformations, show the number of changes applied
+        const changeCount = (executeResponse as any).unifiedChanges?.length || executeResponse.changes?.length || 0;
+        content = `Transformation completed! Applied ${changeCount} change(s) to your data.`;
       }
 
       console.log(

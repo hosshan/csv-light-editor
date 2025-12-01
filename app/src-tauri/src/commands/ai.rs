@@ -441,7 +441,10 @@ pub struct CsvDataInput {
 pub struct ExecuteScriptResponse {
     pub execution_id: String,
     pub result: ResultPayload,
+    // Legacy format - backward compatibility
     pub changes: Option<Vec<crate::ai_script::DataChange>>,
+    // New unified format
+    pub unified_changes: Option<Vec<crate::ai_script::Change>>,
 }
 
 /// Execute a Python script
@@ -471,24 +474,48 @@ pub async fn execute_script(
                 ResultPayload::Analysis { summary, .. } => {
                     log::info!("[COMMAND] execute_script: Result type: Analysis, summary: {}", summary);
                 }
-                ResultPayload::Transformation { changes, .. } => {
-                    log::info!("[COMMAND] execute_script: Result type: Transformation, changes: {}", changes.len());
+                ResultPayload::Transformation { changes, unified_changes, .. } => {
+                    let changes_count = changes.as_ref().map(|c| c.len()).unwrap_or(0);
+                    let unified_count = unified_changes.as_ref().map(|c| c.len()).unwrap_or(0);
+                    log::info!("[COMMAND] execute_script: Result type: Transformation, legacy changes: {}, unified changes: {}", changes_count, unified_count);
                 }
                 ResultPayload::Error { message } => {
                     log::warn!("[COMMAND] execute_script: Result type: Error, message: {}", message);
                 }
             }
             
-            let changes = match &execution_result.result {
-                ResultPayload::Transformation { changes, .. } => Some(changes.clone()),
-                _ => None,
+            let (changes, unified_changes) = match &execution_result.result {
+                ResultPayload::Transformation { changes, unified_changes, .. } => {
+                    (changes.clone(), unified_changes.clone())
+                },
+                _ => (None, None),
             };
 
-            Ok(ExecuteScriptResponse {
+            let response = ExecuteScriptResponse {
                 execution_id: execution_result.execution_id.clone(),
                 result: execution_result.result,
-                changes,
-            })
+                changes: changes.clone(),
+                unified_changes: unified_changes.clone(),
+            };
+
+            // Log the response being sent to frontend
+            log::info!("[COMMAND] execute_script: Response to frontend - execution_id: {}", response.execution_id);
+            log::info!("[COMMAND] execute_script: Response changes count: {:?}", response.changes.as_ref().map(|c| c.len()));
+            log::info!("[COMMAND] execute_script: Response unified_changes count: {:?}", response.unified_changes.as_ref().map(|c| c.len()));
+
+            if let Some(ref changes_vec) = response.changes {
+                if !changes_vec.is_empty() {
+                    log::info!("[COMMAND] execute_script: Sample legacy changes: {:?}", &changes_vec[..changes_vec.len().min(3)]);
+                }
+            }
+
+            if let Some(ref unified_vec) = response.unified_changes {
+                if !unified_vec.is_empty() {
+                    log::info!("[COMMAND] execute_script: Sample unified changes: {:?}", &unified_vec[..unified_vec.len().min(3)]);
+                }
+            }
+
+            Ok(response)
         }
                 Err(e) => {
                     log::error!("[COMMAND] execute_script: Execution failed: {}", e);
