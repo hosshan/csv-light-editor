@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CSV Light Editor is a high-performance CSV editing application for Mac, built with Tauri (Rust backend) and React (TypeScript frontend). The project aims to handle CSV files with 1M+ rows efficiently using streaming and virtual scrolling techniques.
+Clea is a high-performance CSV editing application for Mac, built with Tauri (Rust backend) and React (TypeScript frontend). The project aims to handle CSV files with 1M+ rows efficiently using streaming and virtual scrolling techniques.
 
 ## Commands
 

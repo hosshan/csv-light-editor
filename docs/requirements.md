@@ -1,4 +1,4 @@
-# CSV Light Editor - 要件定義書
+# Clea - 要件定義書
 
 ## プロジェクト概要
 

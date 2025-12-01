@@ -17,7 +17,7 @@ pub async fn open_file_in_new_window(
         &window_label,
         WindowUrl::App("index.html".into())
     )
-    .title("CSV Light Editor")
+    .title("Clea")
     .inner_size(1280.0, 800.0)
     .min_inner_size(800.0, 600.0)
     .build()

@@ -103,7 +103,7 @@ pub trait LlmClient: Send + Sync {
 Pythonスクリプトのテンプレート構造：
 
 ```python
-# CSV Light Editor - Generated Script
+# Clea - Generated Script
 # User Request: {user_prompt}
 # Generated: {timestamp}
 
@@ -328,7 +328,7 @@ print(json.dumps({
 ### Template Structure
 
 ```python
-# CSV Light Editor - Generated Script
+# Clea - Generated Script
 # ====================================
 # User Request: {user_prompt}
 # Generated: {timestamp}
