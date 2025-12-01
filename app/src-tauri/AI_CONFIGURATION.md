@@ -198,7 +198,7 @@ cargo run
 AI操作の詳細ログを表示:
 
 ```bash
-RUST_LOG=csv_light_editor::ai=debug cargo run
+RUST_LOG=clea::ai=debug cargo run
 ```
 
 全モジュールのデバッグログ:

@@ -1,4 +1,4 @@
-# CSV Light Editor
+# CLEA - CSV Light Edit with AI
 
 A high-performance CSV editing application for Mac, built with Tauri and React.
 

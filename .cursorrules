@@ -79,7 +79,7 @@ cargo fmt           # Rustコードのフォーマット
 - **CSP**: セキュリティのため開発では無効化（`null`）
 - **許可されたAPI**: セキュリティのため`shell.open`のみ有効
 - **開発サーバー**: `http://localhost:1420`で実行
-- **バンドルID**: `io.hosshan.csv-light-editor`
+- **バンドルID**: `io.hosshan.clea`
 
 ## コーディング規約
 

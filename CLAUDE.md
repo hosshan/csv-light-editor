@@ -87,7 +87,7 @@ cargo fmt           # Format Rust code
 - **CSP**: Currently disabled (`null`) in development
 - **Allowed APIs**: Only `shell.open` is enabled for security
 - **Dev Server**: Runs on `http://localhost:1420`
-- **Bundle ID**: `io.hosshan.csv-light-editor`
+- **Bundle ID**: `io.hosshan.clea`
 
 ## Rust Development Guidelines
 

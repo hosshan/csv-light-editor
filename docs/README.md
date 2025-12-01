@@ -77,7 +77,7 @@ CSV Light Editorは、Mac向けの高速かつ軽量なCSV編集アプリケー�
    ```bash
    # プロジェクトのクローン
    git clone <repository-url>
-   cd csv-light-editor
+   cd clea
    
    # 依存関係のインストール
    npm install
