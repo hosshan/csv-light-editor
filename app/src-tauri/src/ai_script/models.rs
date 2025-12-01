@@ -90,7 +90,7 @@ pub struct DataChange {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Change {
-    #[serde(rename = "cell")]
+    #[serde(rename = "cell", rename_all = "camelCase")]
     Cell {
         #[serde(alias = "row_index")]
         row_index: usize,
@@ -101,7 +101,7 @@ pub enum Change {
         #[serde(alias = "new_value")]
         new_value: String,
     },
-    #[serde(rename = "add_column")]
+    #[serde(rename = "add_column", rename_all = "camelCase")]
     AddColumn {
         #[serde(alias = "column_index")]
         column_index: usize,
@@ -111,14 +111,14 @@ pub enum Change {
         #[serde(alias = "default_value")]
         default_value: Option<String>,
     },
-    #[serde(rename = "remove_column")]
+    #[serde(rename = "remove_column", rename_all = "camelCase")]
     RemoveColumn {
         #[serde(alias = "column_index")]
         column_index: usize,
         #[serde(alias = "column_name")]
         column_name: String,
     },
-    #[serde(rename = "rename_column")]
+    #[serde(rename = "rename_column", rename_all = "camelCase")]
     RenameColumn {
         #[serde(alias = "column_index")]
         column_index: usize,
@@ -127,7 +127,7 @@ pub enum Change {
         #[serde(alias = "new_name")]
         new_name: String,
     },
-    #[serde(rename = "add_row")]
+    #[serde(rename = "add_row", rename_all = "camelCase")]
     AddRow {
         #[serde(alias = "row_index")]
         row_index: usize,
@@ -135,7 +135,7 @@ pub enum Change {
         #[serde(alias = "row_data")]
         row_data: Option<Vec<String>>,
     },
-    #[serde(rename = "remove_row")]
+    #[serde(rename = "remove_row", rename_all = "camelCase")]
     RemoveRow {
         #[serde(alias = "row_index")]
         row_index: usize,
