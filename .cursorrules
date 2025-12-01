@@ -1,8 +1,8 @@
-# Cursor Rules for CSV Light Editor
+# Cursor Rules for Clea
 
 ## プロジェクト概要
 
-CSV Light Editorは、Tauri（Rustバックエンド）とReact（TypeScriptフロントエンド）で構築されたMac向けの高性能CSV編集アプリケーションです。ストリーミングとバーチャルスクロール技術を使用して、100万行以上のCSVファイルを効率的に処理することを目標としています。
+Cleaは、Tauri（Rustバックエンド）とReact（TypeScriptフロントエンド）で構築されたMac向けの高性能CSV編集アプリケーションです。ストリーミングとバーチャルスクロール技術を使用して、100万行以上のCSVファイルを効率的に処理することを目標としています。
 
 ## 開発コマンド
 
@@ -79,7 +79,7 @@ cargo fmt           # Rustコードのフォーマット
 - **CSP**: セキュリティのため開発では無効化（`null`）
 - **許可されたAPI**: セキュリティのため`shell.open`のみ有効
 - **開発サーバー**: `http://localhost:1420`で実行
-- **バンドルID**: `io.hosshan.csv-light-editor`
+- **バンドルID**: `io.hosshan.clea`
 
 ## コーディング規約
 

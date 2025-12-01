@@ -1,4 +1,4 @@
-# CSV Light Editor - 実装タスク一覧
+# Clea - 実装タスク一覧
 
 ## Phase 1: プロジェクト基盤構築（Week 1-2）
 

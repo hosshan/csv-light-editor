@@ -52,7 +52,7 @@ impl SettingsManager {
     pub fn new() -> Self {
         let config_dir = dirs::config_dir()
             .expect("Could not find config directory")
-            .join("csv-light-editor");
+            .join("clea");
 
         if !config_dir.exists() {
             fs::create_dir_all(&config_dir).expect("Could not create config directory");

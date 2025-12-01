@@ -1,10 +1,10 @@
-# CSV Light Editor
+# Clea - CSV Light Edit with AI
 
 A high-performance CSV editing application for Mac, built with Tauri and React.
 
 ## Overview
 
-CSV Light Editor is a lightweight yet powerful desktop application designed to handle CSV files efficiently. Built with Rust backend (Tauri) and React frontend, it provides a smooth editing experience even with large datasets.
+Clea is a lightweight yet powerful desktop application designed to handle CSV files efficiently. Built with Rust backend (Tauri) and React frontend, it provides a smooth editing experience even with large datasets.
 
 ## Features
 

@@ -1,10 +1,10 @@
 # キーボードショートカット一覧
 
-## CSV Light Editor 実装済みショートカット
+## Clea 実装済みショートカット
 
 ### ファイル操作
 
-| アクション | CSV Light Editor | Google SpreadSheet | Excel |
+| アクション | Clea | Google SpreadSheet | Excel |
 |------------|------------------|-------------------|-------|
 | 保存 | `Cmd/Ctrl + S` | `Cmd/Ctrl + S` | `Cmd/Ctrl + S` |
 | 名前を付けて保存 | `Cmd/Ctrl + Shift + S` | `Cmd/Ctrl + Shift + S` | `Cmd/Ctrl + Shift + S` |
@@ -13,7 +13,7 @@
 
 ### 編集操作
 
-| アクション | CSV Light Editor | Google SpreadSheet | Excel |
+| アクション | Clea | Google SpreadSheet | Excel |
 |------------|------------------|-------------------|-------|
 | コピー | `Cmd/Ctrl + C` | `Cmd/Ctrl + C` | `Cmd/Ctrl + C` |
 | カット | `Cmd/Ctrl + X` | `Cmd/Ctrl + X` | `Cmd/Ctrl + X` |
@@ -25,7 +25,7 @@
 
 ### セル操作・ナビゲーション
 
-| アクション | CSV Light Editor | Google SpreadSheet | Excel |
+| アクション | Clea | Google SpreadSheet | Excel |
 |------------|------------------|-------------------|-------|
 | セル編集を開始 | `Enter` / `F2` | `Enter` / `F2` | `F2` |
 | セル編集を確定（次の行へ） | `Enter` | `Enter` | `Enter` |
@@ -46,7 +46,7 @@
 
 ### 行操作
 
-| アクション | CSV Light Editor | Google SpreadSheet | Excel |
+| アクション | Clea | Google SpreadSheet | Excel |
 |------------|------------------|-------------------|-------|
 | 行を挿入 | `Cmd/Ctrl + Shift + I` | `Cmd/Ctrl + Shift + +` | `Cmd/Ctrl + Shift + +` |
 | 行を削除 | （コンテキストメニュー） | `Cmd/Ctrl + -` | `Cmd/Ctrl + -` |
@@ -54,7 +54,7 @@
 
 ### 列操作
 
-| アクション | CSV Light Editor | Google SpreadSheet | Excel |
+| アクション | Clea | Google SpreadSheet | Excel |
 |------------|------------------|-------------------|-------|
 | 列を追加 | （コンテキストメニュー） | `Cmd/Ctrl + Shift + +` | `Cmd/Ctrl + Shift + +` |
 | 列を削除 | （コンテキストメニュー） | `Cmd/Ctrl + -` | `Cmd/Ctrl + -` |
@@ -62,7 +62,7 @@
 
 ### 検索・置換
 
-| アクション | CSV Light Editor | Google SpreadSheet | Excel |
+| アクション | Clea | Google SpreadSheet | Excel |
 |------------|------------------|-------------------|-------|
 | 検索 | `Cmd/Ctrl + F` | `Cmd/Ctrl + F` | `Cmd/Ctrl + F` |
 | 置換 | `Cmd/Ctrl + R` | `Cmd/Ctrl + H` | `Cmd/Ctrl + H` |
@@ -72,7 +72,7 @@
 
 ### その他
 
-| アクション | CSV Light Editor | Google SpreadSheet | Excel |
+| アクション | Clea | Google SpreadSheet | Excel |
 |------------|------------------|-------------------|-------|
 | セルをダブルクリックで編集 | 対応 | 対応 | 対応 |
 | 範囲選択（Shift+クリック） | 対応 | 対応 | 対応 |
@@ -81,7 +81,7 @@
 
 ## 未実装の機能（将来実装予定）
 
-以下のショートカットは、Google SpreadSheetやExcelで利用可能ですが、現在CSV Light Editorでは未実装です：
+以下のショートカットは、Google SpreadSheetやExcelで利用可能ですが、現在Cleaでは未実装です：
 
 - セルの書式設定（`Cmd/Ctrl + 1`）
 - 太字（`Cmd/Ctrl + B`）
@@ -97,6 +97,6 @@
 ## 注意事項
 
 - Macでは `Cmd` キー、Windows/Linuxでは `Ctrl` キーを使用します
-- CSV Light Editorは、Mac向けに最適化されているため、主に `Cmd` キーでの操作を想定しています
+- Cleaは、Mac向けに最適化されているため、主に `Cmd` キーでの操作を想定しています
 - 一部の機能はコンテキストメニュー（右クリック）からもアクセス可能です
 

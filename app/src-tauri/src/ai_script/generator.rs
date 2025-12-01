@@ -170,7 +170,7 @@ impl ScriptGenerator {
         let normalized_code = Self::normalize_code_indentation(code);
 
         format!(
-            r#"# CSV Light Editor - Generated Script
+            r#"# Clea - Generated Script
 # User Request: {}
 # Generated: {}
 # Script Type: {}

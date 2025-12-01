@@ -1,8 +1,8 @@
-# CSV Light Editor ドキュメント
+# Clea ドキュメント
 
 ## 📁 ドキュメント構成
 
-このディレクトリには、CSV Light Editorプロジェクトの設計・開発に関する全てのドキュメントが含まれています。
+このディレクトリには、Cleaプロジェクトの設計・開発に関する全てのドキュメントが含まれています。
 
 ### 📋 ドキュメント一覧
 
@@ -30,7 +30,7 @@
 
 ## 🎯 プロジェクト概要
 
-CSV Light Editorは、Mac向けの高速かつ軽量なCSV編集アプリケーションです。
+Cleaは、Mac向けの高速かつ軽量なCSV編集アプリケーションです。
 
 ### 主な特徴
 - ✨ **高速処理**: 100万行以上のCSVファイルもスムーズに処理
@@ -77,7 +77,7 @@ CSV Light Editorは、Mac向けの高速かつ軽量なCSV編集アプリケー�
    ```bash
    # プロジェクトのクローン
    git clone <repository-url>
-   cd csv-light-editor
+   cd clea
    
    # 依存関係のインストール
    npm install

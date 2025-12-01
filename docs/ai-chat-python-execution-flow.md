@@ -2,7 +2,7 @@
 
 ## 概要
 
-CSV Light Editorでは、ユーザーがAIチャットでプロンプトを入力すると、LLM（OpenAI/Gemini）がPythonスクリプトを生成し、実行して結果をフロントエンドに返します。このドキュメントでは、その一連のフローを詳しく説明します。
+Cleaでは、ユーザーがAIチャットでプロンプトを入力すると、LLM（OpenAI/Gemini）がPythonスクリプトを生成し、実行して結果をフロントエンドに返します。このドキュメントでは、その一連のフローを詳しく説明します。
 
 ## システムアーキテクチャ
 
@@ -285,7 +285,7 @@ Pythonスクリプト生成を担当。
 
 **生成されるスクリプト構造**:
 ```python
-# CSV Light Editor - Generated Script
+# Clea - Generated Script
 # User Request: <prompt>
 # Generated: <timestamp>
 # Script Type: analysis/transformation

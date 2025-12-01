@@ -323,7 +323,7 @@ impl OpenAiClient {
         };
 
         format!(
-            r#"You are a Python code generator for CSV data manipulation in CSV Light Editor.
+            r#"You are a Python code generator for CSV data manipulation in Clea.
 
 Your task is to generate Python code that processes CSV data according to user requests.
 

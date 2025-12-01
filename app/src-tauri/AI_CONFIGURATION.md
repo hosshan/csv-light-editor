@@ -1,6 +1,6 @@
 # AI機能 設定ガイド
 
-CSV Light Editorの AI機能は環境変数で設定できます。
+Cleaの AI機能は環境変数で設定できます。
 
 ## 設定方法
 
@@ -198,7 +198,7 @@ cargo run
 AI操作の詳細ログを表示:
 
 ```bash
-RUST_LOG=csv_light_editor::ai=debug cargo run
+RUST_LOG=clea::ai=debug cargo run
 ```
 
 全モジュールのデバッグログ:

@@ -7,7 +7,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "csv-light-editor",
+    "productName": "clea",
     "version": "0.1.0"
   },
   "tauri": {
@@ -30,7 +30,7 @@
     },
     "windows": [
       {
-        "title": "CSV Light Editor",
+        "title": "Clea",
         "width": 1280,
         "height": 800,
         "minWidth": 800,
@@ -44,7 +44,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "io.hosshan.csv-light-editor",
+      "identifier": "io.hosshan.clea",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
